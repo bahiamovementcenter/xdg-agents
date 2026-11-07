@@ -172,15 +172,8 @@ Paths in JSON are absolute. Text output shortens `$HOME` to `~`.
 
 ## Decisions
 
-| Question | Proposed | Alternatives |
-| :-- | :-- | :-- |
-| Default view | Everything on disk, grouped as above | Only what's out of place, with `--all` for the rest |
-| `--check` | From the start | Later |
-| `--json` | From the start (cheap if the report is data first) | Later |
-| `--sizes` | An option, off by default: it walks large folders | Always on; never |
-| Desktop app | Listed in full, like every agent | Summarised by category |
-| "Under investigation" source | A machine-readable list in each layout, for example `investigating = [{ path, note }]`. `status` can't parse `docs/follow-ups.md`, and two copies would drift | Leave these as unclassified until settled |
-| Symbols | As above, with plain-text fallbacks (`ok`, `move`, `stay`…) when the output isn't a terminal or `NO_COLOR` is set | Plain text only |
+The open choices for `status` are numbers 10 to 17 in `docs/decisions.md`.
+The defaults marked *(proposed)* above are the recommended answers there.
 
 ## Not `status`'s job
 

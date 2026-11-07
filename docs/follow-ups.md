@@ -119,9 +119,4 @@ checked against the settings reference. Both are in
 
 ## Decisions
 
-- **macOS scope.** `~/Library/Application Support` is the platform's own
-  convention. Should `xdg-agents` only report there, or also plan and apply?
-  Needs an ADR before any macOS layout.
-- **Files that aren't the agent's own** (plugins, the cloud runner): should
-  `status` list them separately, list them as unknown, or skip them? Each
-  layout could name known foreign files with an `untracked` reason.
+Questions that need a choice, not more facts, are in `docs/decisions.md`.
