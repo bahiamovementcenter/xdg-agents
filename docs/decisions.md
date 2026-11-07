@@ -12,7 +12,9 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 
 ## Open
 
-None right now.
+| # | Question | Options | Recommended |
+| :-- | :-- | :-- | :-- |
+| 26 | Make `tools/probe` generic instead of Claude-specific: one probe that reads everything agent-specific from the layout (how to run the agent once non-interactively, which variable points it at the fake model and which protocol it speaks, how to let it use tools), with checks derived from the layout's roots and paths. The fake model gets one adapter per protocol (Anthropic, OpenAI, Gemini), not per agent. Agents without a layout get a discovery run that only lists what appears. | **A** now, before any second agent · **B** when the second agent is added | A |
 
 ## Decided
 
