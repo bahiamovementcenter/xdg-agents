@@ -8,6 +8,19 @@ describes the result.
 looks only at names, types and symlink targets, so it can't print a
 credential even by mistake.
 
+## What's built
+
+`xdg-agents list` and `xdg-agents status [--check] [--json] [--all]
+[AGENT...]` work as described below, except:
+
+- **`--sizes`** isn't built yet.
+- **Under investigation (`?`)** needs the `investigating` list in each
+  layout (decision 11), which isn't in the schema yet. Until then those files
+  show as unclassified.
+- **The output differs slightly in places:** headers show every root that
+  exists (for Claude Code, also its temp folder), and entries keep their
+  category group even when their state is "stays".
+
 ## Command line
 
 ```
