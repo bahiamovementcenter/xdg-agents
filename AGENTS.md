@@ -1,0 +1,131 @@
+# AGENTS.md
+
+Instructions for AI coding agents (and people) working in this repository, in
+the [AGENTS.md](https://agents.md) format. Keep it current: an agent follows
+what it says, including the commands below.
+
+## Project overview
+
+**Goal.** `xdg-agents` makes AI coding agents (Claude Code, Codex and others)
+keep their files where the [XDG Base Directory Specification][basedir] says
+they belong, instead of in their own dot-folders in the home directory
+(`~/.claude`, `~/.codex`, ...).
+
+It does this in three steps, each usable on its own:
+
+1. **Report**: for each agent installed on the machine, show where its files
+   are now, what kind of file each one is (configuration, data, state, cache,
+   runtime), and where the spec says it should be.
+2. **Plan**: show exactly what would move where, and which environment
+   variables or settings would point the agent at the new locations.
+3. **Apply**: carry out a plan, reversibly, only when asked.
+
+**Who it's for.** People who want a tidy home directory, predictable backups
+(back up config and data, skip cache), and dotfile setups that can be shared
+between machines.
+
+**Not goals.**
+
+- Not a dotfile manager, and not a sync tool.
+- Never changes an agent's own files or code, and never patches its binary.
+- Doesn't move anything on its own: "report" and "plan" are read-only, and
+  "apply" only runs a plan the user has seen.
+- Doesn't decide what an agent's files *mean* by guessing at run time: each
+  agent's layout is written down in Nickel (see below) and reviewed.
+
+### What the spec says (basedir 0.8)
+
+| Variable | Holds | Default when unset or empty |
+| :-- | :-- | :-- |
+| `XDG_CONFIG_HOME` | User configuration | `$HOME/.config` |
+| `XDG_DATA_HOME` | User data that should survive | `$HOME/.local/share` |
+| `XDG_STATE_HOME` | State that persists between runs but isn't worth backing up (history, logs, recent files) | `$HOME/.local/state` |
+| `XDG_CACHE_HOME` | Non-essential, regenerable data | `$HOME/.cache` |
+| `XDG_RUNTIME_DIR` | Sockets, locks and other per-session files | No default: if unset, warn and fall back |
+| `XDG_CONFIG_DIRS` | System-wide configuration, in order of preference | `/etc/xdg` |
+| `XDG_DATA_DIRS` | System-wide data, in order of preference | `/usr/local/share/:/usr/share/` |
+
+User executables go in `$HOME/.local/bin`. A path in any of these variables
+that isn't absolute is invalid and must be ignored. Each agent's files go in
+a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
+
+### How it fits together
+
+- **Agent layouts** (`agents/*.ncl`, not written yet): one Nickel file per
+  agent, saying which of its files are configuration, data, state, cache or
+  runtime, and how the agent can be pointed elsewhere (an environment
+  variable, a setting, or only a symlink). `schema.ncl` holds the contract
+  every layout must satisfy, so a mistake in one is reported before the tool
+  runs.
+- **The tool** (`main.go` for now): resolves the XDG variables as the table
+  above says, evaluates the layouts through [go-nickel][go-nickel], and
+  reports, plans or applies.
+- **Decisions** are recorded in `docs/adr/`.
+
+### Current state
+
+Scaffolding only. `main.go`, `config.ncl` and `schema.ncl` are still the
+`go-nickel` template's greeting example and are to be replaced.
+
+### First "done" check
+
+The first slice is finished when this works on a machine with Claude Code
+installed:
+
+```sh
+./xdg-agents status
+```
+
+and prints, for Claude Code only: each file or folder it uses now, its XDG
+category, its target location, and how Claude Code can be pointed there
+(for example the `CLAUDE_CONFIG_DIR` environment variable, if it covers that
+file). It is read-only and needs no flags. A test covers the XDG variable
+rules in the table above, including empty and relative values.
+
+Work that doesn't move this check, or a later one written here, closer to
+passing is drift: cut it, or update this section on purpose first.
+
+## Setup
+
+Enter the development shell with `nix develop` (or `direnv allow`). Without
+flakes enabled, add `--extra-experimental-features 'nix-command flakes'`. The
+shell provides Go, gotools, golangci-lint, Nickel and its language server
+(`nls`), and a C compiler: go-nickel links Nickel's interpreter through cgo,
+so `CGO_ENABLED=1` is set.
+
+## Build and test
+
+From the development shell:
+
+```sh
+go build -o xdg-agents .    # build
+./xdg-agents                # run (reads config.ncl)
+go test ./...               # must pass before a change is done
+go vet ./...                # must pass
+golangci-lint run           # must pass
+nickel typecheck schema.ncl # for any .ncl file you change
+nix flake check             # when flake.nix changes
+```
+
+## Code style
+
+- `gofmt` (or `goimports`) on Go, `nickel format` on Nickel, `nix fmt` on Nix.
+- Comments say why, not what.
+- Anything that touches the file system outside a test's temporary directory
+  must be behind the "apply" step and must be reversible.
+
+## Commits and pull requests
+
+- One logical change per commit, with a short imperative subject line.
+- Record a decision that changes the design as an ADR in `docs/adr/`,
+  numbered in order, before or with the change.
+
+## Security
+
+- Agents' folders hold credentials (API keys, OAuth tokens). Never print,
+  copy or log file *contents* from them; the tool deals in paths only.
+- Tests must use temporary directories and a fake `HOME`, never the real one.
+- Don't run `apply` against a real home directory while developing.
+
+[basedir]: https://specifications.freedesktop.org/basedir-spec/latest/
+[go-nickel]: https://github.com/nickel-lang/go-nickel
