@@ -95,6 +95,9 @@ checked against the settings reference. Both are in
   `sqlite_home` (or `CODEX_SQLITE_HOME`) besides `CODEX_HOME`. Gemini CLI
   has `general.plan.directory` and keeps binaries in `~/.gemini/bin`. Qwen
   Code, opencode, Aider and Cursor have schemas too.
+- **Jev** (`docs/evals/jev-categories.md`): not used for now (decision 22).
+  When a Jev version newer than jev-1.14.0 comes out, rerun the
+  evaluation with `docs/evals/jev/run.py` and compare.
 - **The settings check relies on SchemaStore**, which isn't Anthropic's
   documentation. If the schema falls behind the settings reference,
   `docsdrift` misses new settings. A check of the reference itself would

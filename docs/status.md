@@ -51,11 +51,11 @@ Claude Code — root ~/.claude (CLAUDE_CONFIG_DIR unset)
   state
     ✗ projects/  🔒        → ~/.local/state/claude/projects/     symlink
         includes projects/*/memory (data): autoMemoryDirectory can move it, with a caveat
-    ✗ shell-snapshots/     → ~/.local/state/claude/shell-snapshots/  symlink
   cache
     ✗ cache/               → ~/.cache/claude/cache/              symlink
   runtime
     ✗ sessions/            → /run/user/1000/claude/sessions/     symlink
+    ✗ shell-snapshots/     → /run/user/1000/claude/shell-snapshots/  symlink
   legacy (no longer written; safe to delete)
     · todos/  statsig/
   under investigation (docs/follow-ups.md)
