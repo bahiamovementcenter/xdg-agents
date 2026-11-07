@@ -211,3 +211,32 @@ func TestCompareSettings(t *testing.T) {
 		t.Error("a report with settings drift must not be empty")
 	}
 }
+
+// Cases a line-by-line parser got wrong or only got right by accident.
+func TestExtractDocPathsMarkdownEdgeCases(t *testing.T) {
+	page := directoryPage(
+		"| `pipe\\|dir/` | A pipe inside a code span doesn't split the cell |",
+		"| [`linked/`](#x), `second/` | Code in a link, then more code |",
+	) + "\n## Application data, continued\n\n" +
+		"* [`enableArtifact`](#x) isn't set to `false`\n" +
+		"* `no-colon/` is mentioned without a definition\n" +
+		"* `defined/`: has a colon\n"
+	got, err := ExtractDocPaths(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	set := map[string]bool{}
+	for _, p := range got {
+		set[p] = true
+	}
+	for _, want := range []string{"pipe|dir", "linked", "second", "defined"} {
+		if !set[want] {
+			t.Errorf("missing %q in %v", want, got)
+		}
+	}
+	for _, unwanted := range []string{"pipe", "enableArtifact", "false", "no-colon"} {
+		if set[unwanted] {
+			t.Errorf("unexpected %q in %v", unwanted, got)
+		}
+	}
+}

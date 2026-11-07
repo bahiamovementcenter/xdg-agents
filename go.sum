@@ -1,2 +1,4 @@
 github.com/nickel-lang/go-nickel v0.0.0-20251217025043-827dc613bd42 h1:q46PGsfcUUNKv54AdGFTf+Nw4dFY60OJCAlpHvg2Yc8=
 github.com/nickel-lang/go-nickel v0.0.0-20251217025043-827dc613bd42/go.mod h1:plBpk12/Y3VfJ70na0k3CX9h71lhoAr7wTcUrcF3W50=
+github.com/yuin/goldmark v1.8.7 h1:XT/tNqCIbabh0ln675w4x3dv04kQBKi8NwYqi9IJaxI=
+github.com/yuin/goldmark v1.8.7/go.mod h1:ip/1k0VRfGynBgxOz0yCqHrbZXhcjxyuS66Brc7iBKg=
