@@ -60,5 +60,7 @@ jobs:
       - name: Test
         run: nix develop --command go test ./...
 
+      # On the CI machine no agent is installed, so status reports none; the
+      # tests cover reports on fake home folders
       - name: Build and run
-        run: nix develop --command bash -euo pipefail -c 'go build -o xdg-agents . && ./xdg-agents'
+        run: nix develop --command bash -euo pipefail -c 'go build -o xdg-agents . && ./xdg-agents list && ./xdg-agents status'

@@ -1,108 +1,141 @@
 // xdg-agents makes AI coding agents keep their files where the XDG Base
 // Directory Specification says they belong (see AGENTS.md).
 //
-// For now it only loads the agent layouts: it evaluates every agents/*.ncl
-// (or every .ncl file in the folder given as its first argument) through
-// go-nickel, which also runs agents/schema.ncl's contracts, and prints a
-// line per layout. `status`, `plan` and `apply` build on this.
+//	xdg-agents list
+//	xdg-agents status [--check] [--json] [--all] [AGENT...]
+//
+// AGENT is a layout's id or a prefix of one ("claude" matches claude-code
+// and claude-desktop); with none, every installed agent is shown. status is
+// read-only: it looks at names, types and symlink targets, never at what a
+// file holds. docs/status.md describes the report.
 package main
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
+	"io"
 	"os"
-	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
-	"github.com/nickel-lang/go-nickel"
+	"github.com/bahiamovementcenter/xdg-agents/internal/layout"
+	"github.com/bahiamovementcenter/xdg-agents/internal/status"
 )
 
-// Layout is the part of a layout this program uses so far.
-type Layout struct {
-	ID    string            `json:"id"`
-	Name  string            `json:"name"`
-	Roots map[string]object `json:"roots"`
-	Paths []object          `json:"paths"`
-}
+const usage = `usage:
+  xdg-agents list
+  xdg-agents status [--check] [--json] [--all] [AGENT...]
 
-// The fields of roots and paths aren't read yet; decoding them as generic
-// objects keeps the count right without fixing their Go shape early.
-type object = map[string]any
-
-// schemaFile is the contract every layout imports; it isn't a layout itself.
-const schemaFile = "schema.ncl"
-
-// loadLayouts evaluates every layout in dir, in name order. A layout that
-// fails its contract is an error naming the file, with Nickel's message.
-func loadLayouts(dir string) ([]Layout, error) {
-	files, err := filepath.Glob(filepath.Join(dir, "*.ncl"))
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(files)
-	var layouts []Layout
-	for _, f := range files {
-		if filepath.Base(f) == schemaFile {
-			continue
-		}
-		l, err := loadLayout(f)
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", f, err)
-		}
-		layouts = append(layouts, l)
-	}
-	if len(layouts) == 0 {
-		return nil, fmt.Errorf("no layouts in %s", dir)
-	}
-	return layouts, nil
-}
-
-func loadLayout(path string) (Layout, error) {
-	src, err := os.ReadFile(path)
-	if err != nil {
-		return Layout{}, err
-	}
-
-	// go-nickel evaluates source text, and Nickel looks for imports (here
-	// schema.ncl) in the current directory, so evaluate from the layout's
-	// own folder
-	wd, err := os.Getwd()
-	if err != nil {
-		return Layout{}, err
-	}
-	if err := os.Chdir(filepath.Dir(path)); err != nil {
-		return Layout{}, err
-	}
-	defer func() { _ = os.Chdir(wd) }()
-
-	expr, err := nickel.NewContext().EvalDeep(string(src))
-	if err != nil {
-		return Layout{}, err
-	}
-	var l Layout
-	if err := expr.ConvertTo(&l); err != nil {
-		return Layout{}, err
-	}
-	return l, nil
-}
+Options for both: --layouts DIR (default: agents)
+`
 
 func main() {
-	dir := "agents"
-	if len(os.Args) > 1 {
-		dir = os.Args[1]
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr, os.Getenv))
+}
+
+// run is main without the process: it returns the exit status, so tests can
+// drive it with any arguments and environment.
+func run(args []string, stdout, stderr io.Writer, getenv func(string) string) int {
+	if len(args) == 0 {
+		_, _ = fmt.Fprint(stderr, usage)
+		return 2
+	}
+	cmd, args := args[0], args[1:]
+	fs := flag.NewFlagSet(cmd, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	dir := fs.String("layouts", "agents", "the folder of agent layouts")
+	check := fs.Bool("check", false, "exit 1 if anything shown is out of place")
+	asJSON := fs.Bool("json", false, "write the report as JSON")
+	all := fs.Bool("all", false, "also list layout entries that aren't on disk")
+	if err := fs.Parse(args); err != nil {
+		return 2
 	}
 
-	layouts, err := loadLayouts(dir)
+	layouts, err := layout.LoadDir(*dir)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "xdg-agents:", err)
-		os.Exit(1)
+		_, _ = fmt.Fprintln(stderr, "xdg-agents:", err)
+		return 2
 	}
-	for _, l := range layouts {
-		roots := make([]string, 0, len(l.Roots))
-		for r := range l.Roots {
-			roots = append(roots, r)
+
+	switch cmd {
+	case "list":
+		r := status.Compute(layouts, getenv, status.Options{Named: true, GOOS: runtime.GOOS, UID: os.Getuid()})
+		for _, a := range r.Agents {
+			installed := "not installed"
+			if a.Installed {
+				installed = "installed"
+			}
+			_, _ = fmt.Fprintf(stdout, "%-16s %-24s %s\n", a.ID, a.Name, installed)
 		}
-		sort.Strings(roots)
-		fmt.Printf("%s (%s): %d paths under %s\n", l.ID, l.Name, len(l.Paths), strings.Join(roots, ", "))
+		return 0
+
+	case "status":
+		chosen, err := choose(layouts, fs.Args())
+		if err != nil {
+			_, _ = fmt.Fprintln(stderr, "xdg-agents:", err)
+			return 2
+		}
+		r := status.Compute(chosen, getenv, status.Options{
+			All: *all, GOOS: runtime.GOOS, UID: os.Getuid(), Named: len(fs.Args()) > 0,
+		})
+		if *asJSON {
+			b, _ := json.MarshalIndent(r, "", "  ")
+			_, _ = fmt.Fprintln(stdout, string(b))
+		} else if err := status.Text(stdout, r, getenv("HOME"), plain(stdout, getenv)); err != nil {
+			_, _ = fmt.Fprintln(stderr, "xdg-agents:", err)
+			return 2
+		}
+		if *check && r.NeedsAttention() {
+			return 1
+		}
+		return 0
 	}
+	_, _ = fmt.Fprint(stderr, usage)
+	return 2
+}
+
+// choose picks the layouts named by id or id prefix; none means all.
+func choose(layouts []layout.Layout, names []string) ([]layout.Layout, error) {
+	if len(names) == 0 {
+		return layouts, nil
+	}
+	var chosen []layout.Layout
+	seen := map[string]bool{}
+	for _, n := range names {
+		found := false
+		for _, l := range layouts {
+			if strings.HasPrefix(l.ID, n) {
+				found = true
+				if !seen[l.ID] {
+					seen[l.ID] = true
+					chosen = append(chosen, l)
+				}
+			}
+		}
+		if !found {
+			ids := make([]string, 0, len(layouts))
+			for _, l := range layouts {
+				ids = append(ids, l.ID)
+			}
+			sort.Strings(ids)
+			return nil, fmt.Errorf("no agent %q; known: %s", n, strings.Join(ids, ", "))
+		}
+	}
+	return chosen, nil
+}
+
+// plain reports whether to use words instead of symbols: when the output
+// isn't a terminal, or NO_COLOR is set.
+func plain(w io.Writer, getenv func(string) string) bool {
+	if getenv("NO_COLOR") != "" {
+		return true
+	}
+	f, ok := w.(*os.File)
+	if !ok {
+		return true
+	}
+	fi, err := f.Stat()
+	return err != nil || fi.Mode()&os.ModeCharDevice == 0
 }
