@@ -79,7 +79,7 @@ Where it disagreed, most confident first:
 - **Some disagreements are fair questions about the layout.**
   `shell-snapshots` (0.86 runtime): the docs say Claude Code removes it on a
   clean exit, the same cleanup as `sessions/`, which the layout already
-  calls runtime. That's decision 23. `session-env` is different: the docs
+  calls runtime. Decision 23 made it runtime. `session-env` is different: the docs
   sweep it by age, not on exit, so state stands.
 - **It's fast and cheap,** about 200 ms and 500 tokens a question, but
   TypeSafe's speed and cost claims weren't what was being tested.
@@ -89,4 +89,5 @@ Where it disagreed, most confident first:
 Not good enough to propose categories on its own, and not reliable enough
 that its confidence could decide which proposals to trust. As a second
 opinion beside the docs text it did find one real question about the
-layout. Whether to use it that way is decision 22.
+layout. Decision 22: not now; rerun this evaluation when a new Jev version
+comes out (the reply's `model` field says which version answered).

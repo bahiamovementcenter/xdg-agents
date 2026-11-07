@@ -114,7 +114,6 @@ let { Layout, .. } = import "schema.ncl" in
     { root = "home", path = "debug", kind = 'dir, category = 'state, move = 'symlink, cleanup = 'swept, holds = "Debug logs, only in debug mode", note = "CLAUDE_CODE_DEBUG_LOGS_DIR overrides the log file path (a file, not a folder)." },
     { root = "home", path = "paste-cache", kind = 'dir, category = 'state, move = 'symlink, cleanup = 'swept, holds = "Pasted content" },
     { root = "home", path = "uploads", kind = 'dir, category = 'state, move = 'symlink, holds = "Uploaded files, per session" },
-    { root = "home", path = "shell-snapshots", kind = 'dir, category = 'state, move = 'symlink, cleanup = 'removed_on_exit, holds = "Shell environment snapshots" },
     { root = "home", path = "session-env", kind = 'dir, category = 'state, move = 'symlink, holds = "Per-session environment" },
     { root = "home", path = "tasks", kind = 'dir, category = 'state, move = 'symlink, holds = "Per-session tasks" },
     { root = "home", path = "jobs", kind = 'dir, category = 'state, move = 'symlink, cleanup = 'kept, holds = "Background session state" },
@@ -140,6 +139,7 @@ let { Layout, .. } = import "schema.ncl" in
     { root = "home", path = "image-cache", kind = 'dir, category = 'cache, move = 'symlink, legacy = true, holds = "Old image cache" },
 
     # Runtime: only while a session runs
+    { root = "home", path = "shell-snapshots", kind = 'dir, category = 'runtime, move = 'symlink, cleanup = 'removed_on_exit, holds = "Shell environment snapshots", note = "Removed on clean exit, like sessions/; leftovers from crashes are swept. Runtime by decision 23." },
     { root = "home", path = "sessions", kind = 'dir, category = 'runtime, move = 'symlink, cleanup = 'removed_on_exit, holds = "One small file per running session" },
     { root = "tmp", path = ".", kind = 'dir, category = 'runtime, move = 'env, env = "CLAUDE_CODE_TMPDIR", holds = "Scratchpads, pasted and attached images (images/ per session)", note = "The variable names the parent: Claude Code appends claude-<uid>/ to it, so CLAUDE_CODE_TMPDIR=$XDG_RUNTIME_DIR gives $XDG_RUNTIME_DIR/claude-<uid>/, not .../claude/. Unset, the parent is os.tmpdir() on Linux ($TMPDIR, else /tmp) and /tmp on macOS." },
 
