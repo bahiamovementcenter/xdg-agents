@@ -12,11 +12,8 @@
 # these, so the plan is to symlink directories out to the cache, state and
 # data directories while the app isn't running.
 #
-# Left out on purpose, so `status` reports them as unclassified until someone
-# finds out what they hold: ant-device-registry.json, ant-did,
-# buddy-tokens.json, ca-bundle.pem, ccd-ids.json, chrome-import-sites.json,
-# config.json, cowork-enabled-cli-ops.json, extensions-blocklist.json, fcache,
-# git-shadow, os-entry-points.json, plan-usage-history.json, spaces-present.
+# Files whose purpose isn't known yet are left out on purpose, so `status`
+# reports them as unclassified rather than a guess: see docs/follow-ups.md.
 #
 # ccd-environment-config.json, git-worktrees.json and remote-control-state.json
 # were placed by a probe (followed by key names only, via jq paths): saving a local environment named "xdgprobe" for a
