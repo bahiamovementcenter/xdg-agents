@@ -101,6 +101,17 @@ checked against the settings reference. Both are in
 - **Jev** (`docs/evals/jev-categories.md`): not used for now (decision 22).
   When a Jev version newer than jev-1.14.0 comes out, rerun the
   evaluation with `docs/evals/jev/run.py` and compare.
+- **[probity](https://github.com/nizos/probity)** (MIT, checked 2026-11-07
+  at `eeac421`) hooks into Claude Code, Codex, GitHub Copilot CLI, Copilot
+  Chat and Antigravity CLI to enforce rules. Useful facts, to check against
+  each agent's own docs before a layout uses them:
+  - Copilot CLI: `COPILOT_HOME` moves its folder (default `~/.copilot`), and
+    sessions go to `session-state/<session id>/events.jsonl`.
+  - Codex: hooks are configured in `~/.codex/hooks.json`.
+  - Claude Code, Codex and Antigravity pass `transcript_path` to every hook.
+    A probe could install a hook in its throwaway config that records that
+    path (only the path), so each agent reports its own transcript
+    location.
 - **The settings check relies on SchemaStore**, which isn't Anthropic's
   documentation. If the schema falls behind the settings reference,
   `docsdrift` misses new settings. A check of the reference itself would
