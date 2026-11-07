@@ -1,0 +1,737 @@
+[
+ {
+  "doc_path": "CLAUDE.md",
+  "path": "CLAUDE.md",
+  "description": "Instructions loaded every session",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.99,
+  "probabilities": {
+   "config": 0.99,
+   "data": 0.01,
+   "state": 0.0,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 206,
+  "usage": {
+   "input_tokens": 487,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "rules/*.md",
+  "path": "rules",
+  "description": "Topic-scoped instructions, optionally path-gated",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.99,
+  "probabilities": {
+   "config": 0.99,
+   "data": 0.01,
+   "state": 0.0,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 182,
+  "usage": {
+   "input_tokens": 489,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "settings.json",
+  "path": "settings.json",
+  "description": "Permissions, hooks, env vars, model defaults",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 1.0,
+  "probabilities": {
+   "config": 1.0,
+   "data": 0.0,
+   "state": 0.0,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 228,
+  "usage": {
+   "input_tokens": 489,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "skills/<name>/SKILL.md",
+  "path": "skills",
+  "description": "Reusable prompts invoked with `/name` or auto-invoked",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.94,
+  "probabilities": {
+   "config": 0.95,
+   "data": 0.05,
+   "state": 0.0,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 227,
+  "usage": {
+   "input_tokens": 492,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "commands/*.md",
+  "path": "commands",
+  "description": "Single-file prompts; same mechanism as skills",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.99,
+  "probabilities": {
+   "config": 0.99,
+   "data": 0.01,
+   "state": 0.0,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 207,
+  "usage": {
+   "input_tokens": 489,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "output-styles/*.md",
+  "path": "output-styles",
+  "description": "Custom instruction sets that adjust how Claude works",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.96,
+  "probabilities": {
+   "config": 0.97,
+   "data": 0.01,
+   "state": 0.01,
+   "cache": 0.01,
+   "runtime": 0.0
+  },
+  "ms": 204,
+  "usage": {
+   "input_tokens": 489,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "agents/*.md",
+  "path": "agents",
+  "description": "Subagent definitions with their own prompt and tools",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.96,
+  "probabilities": {
+   "config": 0.97,
+   "data": 0.03,
+   "state": 0.0,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 193,
+  "usage": {
+   "input_tokens": 489,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "workflows/*.js",
+  "path": "workflows",
+  "description": "Dynamic workflow scripts written by Claude and saved from `/workflows`; each file becomes a `/<name>` command",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.71,
+  "probabilities": {
+   "config": 0.77,
+   "data": 0.2,
+   "state": 0.02,
+   "cache": 0.01,
+   "runtime": 0.0
+  },
+  "ms": 208,
+  "usage": {
+   "input_tokens": 503,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "~/.claude.json",
+  "path": ".claude.json",
+  "description": "App state, account details, UI toggles, personal MCP servers. If it's missing, Claude Code creates it when you start a session or run a subcommand such as `claude auth status`, but not for `--version` or `--help`.",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.98,
+  "probabilities": {
+   "config": 0.98,
+   "data": 0.01,
+   "state": 0.01,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 203,
+  "usage": {
+   "input_tokens": 533,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "keybindings.json",
+  "path": "keybindings.json",
+  "description": "Custom keyboard shortcuts",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 1.0,
+  "probabilities": {
+   "config": 1.0,
+   "data": 0.0,
+   "state": 0.0,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 229,
+  "usage": {
+   "input_tokens": 486,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "themes/*.json",
+  "path": "themes",
+  "description": "Custom color themes",
+  "expected": "config",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.99,
+  "probabilities": {
+   "config": 0.99,
+   "data": 0.01,
+   "state": 0.0,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 190,
+  "usage": {
+   "input_tokens": 482,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "projects/<project>/<session>.jsonl",
+  "path": "projects",
+  "description": "Conversation transcript: messages, tool calls, and tool results, plus the system prompt, tool definitions, and parameters of the requests Claude Code sent the model",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.44,
+  "probabilities": {
+   "config": 0.09,
+   "data": 0.34,
+   "state": 0.55,
+   "cache": 0.02,
+   "runtime": 0.0
+  },
+  "ms": 219,
+  "usage": {
+   "input_tokens": 509,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "file-history/<session>/",
+  "path": "file-history",
+  "description": "Pre-edit snapshots of files Claude changed, used for checkpoint restore. Holds snapshots for the 100 most recent checkpoints; snapshot files that no retained checkpoint references are deleted, except each file's first snapshot",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.98,
+  "probabilities": {
+   "config": 0.0,
+   "data": 0.01,
+   "state": 0.98,
+   "cache": 0.01,
+   "runtime": 0.0
+  },
+  "ms": 210,
+  "usage": {
+   "input_tokens": 521,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "plans/",
+  "path": "plans",
+  "description": "Plan files written during plan mode",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.29,
+  "probabilities": {
+   "config": 0.34,
+   "data": 0.22,
+   "state": 0.43,
+   "cache": 0.01,
+   "runtime": 0.0
+  },
+  "ms": 214,
+  "usage": {
+   "input_tokens": 486,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "debug/",
+  "path": "debug",
+  "description": "Per-session debug logs, written while debug logging is on, such as when you start with `--debug` or run `/debug`",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.89,
+  "probabilities": {
+   "config": 0.01,
+   "data": 0.01,
+   "state": 0.91,
+   "cache": 0.03,
+   "runtime": 0.04
+  },
+  "ms": 210,
+  "usage": {
+   "input_tokens": 506,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "paste-cache/",
+  "path": "paste-cache",
+  "description": "Contents of large pastes",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "cache",
+  "confidence": 0.95,
+  "probabilities": {
+   "config": 0.01,
+   "data": 0.0,
+   "state": 0.03,
+   "cache": 0.96,
+   "runtime": 0.0
+  },
+  "ms": 244,
+  "usage": {
+   "input_tokens": 486,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "image-cache/<session>/",
+  "path": "image-cache",
+  "description": "Attached images saved by Claude Code v2.1.274 and earlier. Later versions save pasted and attached images outside `~/.claude`, in an `images/` directory for each session under the temp directory that `CLAUDE_CODE_TMPDIR` controls. The sweep removes other sessions' leftover directories here, whatever their age.",
+  "expected": "cache",
+  "model": "jev-1.14.0",
+  "choice": "cache",
+  "confidence": 0.96,
+  "probabilities": {
+   "config": 0.0,
+   "data": 0.0,
+   "state": 0.03,
+   "cache": 0.97,
+   "runtime": 0.0
+  },
+  "ms": 265,
+  "usage": {
+   "input_tokens": 550,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "uploads/<session>/",
+  "path": "uploads",
+  "description": "Files you attach from the web or mobile app, and photos you attach from the mobile app, when messaging a Remote Control session. An attachment to a cloud session is saved in that session's own cloud environment instead, not on your machine.",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "data",
+  "confidence": 0.36,
+  "probabilities": {
+   "config": 0.04,
+   "data": 0.49,
+   "state": 0.2,
+   "cache": 0.27,
+   "runtime": 0.0
+  },
+  "ms": 224,
+  "usage": {
+   "input_tokens": 527,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "dev-mods/<session>/",
+  "path": "dev-mods",
+  "description": "Mods that Claude wrote during the session",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.42,
+  "probabilities": {
+   "config": 0.54,
+   "data": 0.26,
+   "state": 0.16,
+   "cache": 0.03,
+   "runtime": 0.01
+  },
+  "ms": 237,
+  "usage": {
+   "input_tokens": 488,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "session-env/",
+  "path": "session-env",
+  "description": "Per-session environment metadata",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.31,
+  "probabilities": {
+   "config": 0.1,
+   "data": 0.02,
+   "state": 0.45,
+   "cache": 0.02,
+   "runtime": 0.41
+  },
+  "ms": 202,
+  "usage": {
+   "input_tokens": 484,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "tasks/",
+  "path": "tasks",
+  "description": "Task lists written by the task tools, one directory per list",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "data",
+  "confidence": 0.3,
+  "probabilities": {
+   "config": 0.16,
+   "data": 0.44,
+   "state": 0.39,
+   "cache": 0.01,
+   "runtime": 0.0
+  },
+  "ms": 201,
+  "usage": {
+   "input_tokens": 491,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "shell-snapshots/",
+  "path": "shell-snapshots",
+  "description": "Aliases, functions, and shell options captured at startup and applied by the Bash tool to each command. Removed on clean exit. The sweep clears any left after a crash.",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.9,
+  "probabilities": {
+   "config": 0.01,
+   "data": 0.01,
+   "state": 0.92,
+   "cache": 0.02,
+   "runtime": 0.04
+  },
+  "ms": 224,
+  "usage": {
+   "input_tokens": 518,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "backups/",
+  "path": "backups",
+  "description": "Earlier versions of `~/.claude.json`, copied when Claude Code rewrites the file. Claude Code keeps the five newest copies, plus a copy of any version it couldn't parse. Past the age cutoff, the last copy that holds your configuration is deleted too. If the current file parses, holds your configuration, and is under 8 MiB, you're left with a new copy of it.",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.41,
+  "probabilities": {
+   "config": 0.32,
+   "data": 0.08,
+   "state": 0.53,
+   "cache": 0.07,
+   "runtime": 0.0
+  },
+  "ms": 195,
+  "usage": {
+   "input_tokens": 563,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "feedback-bundles/",
+  "path": "feedback-bundles",
+  "description": "Redacted transcript archives written by `/feedback` on third-party providers or when no Anthropic credentials are configured, for sending to your Anthropic account team",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.24,
+  "probabilities": {
+   "config": 0.39,
+   "data": 0.2,
+   "state": 0.36,
+   "cache": 0.05,
+   "runtime": 0.0
+  },
+  "ms": 218,
+  "usage": {
+   "input_tokens": 516,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "usage-data/",
+  "path": "usage-data",
+  "description": "`report.html` and timestamped report copies written by `/insights`, plus cached per-session analysis data used to build them",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.61,
+  "probabilities": {
+   "config": 0.01,
+   "data": 0.09,
+   "state": 0.69,
+   "cache": 0.21,
+   "runtime": 0.0
+  },
+  "ms": 210,
+  "usage": {
+   "input_tokens": 508,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "skills/.trash/",
+  "path": "skills/.trash",
+  "description": "Skills and plugins that the claude.ai sync removed, such as after you turn one off on claude.ai or stop syncing. The files stay here so you can recover them until the sweep deletes them",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.19,
+  "probabilities": {
+   "config": 0.35,
+   "data": 0.14,
+   "state": 0.33,
+   "cache": 0.18,
+   "runtime": 0.0
+  },
+  "ms": 248,
+  "usage": {
+   "input_tokens": 522,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "plugins/.trash/",
+  "path": "plugins/.trash",
+  "description": "Skills and plugins that the claude.ai sync removed, such as after you turn one off on claude.ai or stop syncing. The files stay here so you can recover them until the sweep deletes them",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.2,
+  "probabilities": {
+   "config": 0.29,
+   "data": 0.11,
+   "state": 0.36,
+   "cache": 0.24,
+   "runtime": 0.0
+  },
+  "ms": 226,
+  "usage": {
+   "input_tokens": 521,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "sessions/",
+  "path": "sessions",
+  "description": "holds one small file per running session, used to detect concurrent sessions and crashes. It isn't part of the age-based sweep: Claude Code removes each file when its session exits and clears crash leftovers on the next launch.",
+  "expected": "runtime",
+  "model": "jev-1.14.0",
+  "choice": "runtime",
+  "confidence": 0.86,
+  "probabilities": {
+   "config": 0.0,
+   "data": 0.0,
+   "state": 0.1,
+   "cache": 0.01,
+   "runtime": 0.89
+  },
+  "ms": 198,
+  "usage": {
+   "input_tokens": 525,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "history.jsonl",
+  "path": "history.jsonl",
+  "description": "Prompts you've typed, with timestamp and project path. Used for up-arrow recall, `Ctrl+R` history search, and `!` shell-command completion. Each sweep removes the entries older than `cleanupPeriodDays` when the HIPAA configuration applies to your sessions.",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.95,
+  "probabilities": {
+   "config": 0.01,
+   "data": 0.03,
+   "state": 0.96,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 202,
+  "usage": {
+   "input_tokens": 541,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "stats-cache.json",
+  "path": "stats-cache.json",
+  "description": "Aggregated token and cost counts shown by `/usage`",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "cache",
+  "confidence": 0.84,
+  "probabilities": {
+   "config": 0.01,
+   "data": 0.01,
+   "state": 0.11,
+   "cache": 0.87,
+   "runtime": 0.0
+  },
+  "ms": 211,
+  "usage": {
+   "input_tokens": 494,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "remote-settings.json",
+  "path": "remote-settings.json",
+  "description": "Cached copy of server-managed settings for your organization, or `{}` when your organization has configured none. Only present when the session fetches them. Claude Code checks for updates at startup and hourly during a session. Claude Code deletes it when you log out.",
+  "expected": "cache",
+  "model": "jev-1.14.0",
+  "choice": "cache",
+  "confidence": 0.55,
+  "probabilities": {
+   "config": 0.29,
+   "data": 0.01,
+   "state": 0.04,
+   "cache": 0.64,
+   "runtime": 0.02
+  },
+  "ms": 189,
+  "usage": {
+   "input_tokens": 536,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "policy-limits.json",
+  "path": "policy-limits.json",
+  "description": "Cached feature policy settings for your organization. Only present for some account types. Refreshed automatically. A `policy-limits.json.stamp.json` sidecar records which account or API key the cache belongs to. Claude Code deletes both files when you log out.",
+  "expected": "cache",
+  "model": "jev-1.14.0",
+  "choice": "cache",
+  "confidence": 0.37,
+  "probabilities": {
+   "config": 0.44,
+   "data": 0.01,
+   "state": 0.04,
+   "cache": 0.5,
+   "runtime": 0.01
+  },
+  "ms": 192,
+  "usage": {
+   "input_tokens": 536,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": ".credentials.json",
+  "path": ".credentials.json",
+  "description": "your login credentials",
+  "expected": "data",
+  "model": "jev-1.14.0",
+  "choice": "config",
+  "confidence": 0.76,
+  "probabilities": {
+   "config": 0.81,
+   "data": 0.19,
+   "state": 0.0,
+   "cache": 0.0,
+   "runtime": 0.0
+  },
+  "ms": 249,
+  "usage": {
+   "input_tokens": 484,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "jobs/",
+  "path": "jobs",
+  "description": "background session state",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.89,
+  "probabilities": {
+   "config": 0.04,
+   "data": 0.04,
+   "state": 0.91,
+   "cache": 0.0,
+   "runtime": 0.01
+  },
+  "ms": 223,
+  "usage": {
+   "input_tokens": 483,
+   "output_tokens": 52
+  }
+ },
+ {
+  "doc_path": "daemon/",
+  "path": "daemon",
+  "description": "background session state",
+  "expected": "state",
+  "model": "jev-1.14.0",
+  "choice": "state",
+  "confidence": 0.61,
+  "probabilities": {
+   "config": 0.14,
+   "data": 0.03,
+   "state": 0.69,
+   "cache": 0.01,
+   "runtime": 0.13
+  },
+  "ms": 225,
+  "usage": {
+   "input_tokens": 484,
+   "output_tokens": 52
+  }
+ }
+]
