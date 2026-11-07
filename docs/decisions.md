@@ -15,6 +15,7 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 | # | Question | Options | Recommended |
 | :-- | :-- | :-- | :-- |
 | 24 | Probe agents automatically using [llm-agents.nix](https://github.com/numtide/llm-agents.nix) as a flake input: a Nix build runs each agent offline with a throwaway `HOME` and separate XDG folders, records what appears (names and types only), and reruns with the layout's variables to check they move what we claim. Classifying stays a person's job. | **A** prototype one probe, for Claude Code, and compare it with `agents/claude-code.ncl` · **B** probes for every packaged agent, plus draft layouts (no categories) for agents without one · **C** don't | A |
+| 25 | Signed-in probes, to see the files only real sessions create (`projects/`, `sessions/`, `history.jsonl`…)? Each run makes real model calls and needs network, so it's a script or CI job, not a pure Nix build. | **A** on the owner's machine only, using the official token (`claude setup-token` → `CLAUDE_CODE_OAUTH_TOKEN`) against a fresh, empty `CLAUDE_CONFIG_DIR`, then listing names · **B** in CI too, with the token stored as a GitHub secret · **C** through [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI), which re-exposes subscription logins to other clients: likely against providers' terms, and it holds live tokens · **D** no signed-in probes | A |
 
 ## Decided
 
