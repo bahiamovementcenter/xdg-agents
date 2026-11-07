@@ -14,7 +14,7 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 
 | # | Question | Options | Recommended |
 | :-- | :-- | :-- | :-- |
-| 26 | Make `tools/probe` generic instead of Claude-specific: one probe that reads everything agent-specific from the layout (how to run the agent once non-interactively, which variable points it at the fake model and which protocol it speaks, how to let it use tools), with checks derived from the layout's roots and paths. The fake model gets one adapter per protocol (Anthropic, OpenAI, Gemini), not per agent. Agents without a layout get a discovery run that only lists what appears. | **A** now, before any second agent · **B** when the second agent is added | A |
+| 26 | How should probing scale beyond Claude Code? | **A** automatic: a scheduled CI job probes every [llm-agents.nix](https://github.com/numtide/llm-agents.nix) package, and again when its version changes. Nothing is written per agent: the program comes from the package (`meta.mainProgram`); every common model variable (`ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL`, Gemini's…) points at the fake model at once, which tells the protocol from the request path; how to run once non-interactively, how to allow tools, and which `*_HOME`/`*_CONFIG_DIR` variable moves the folder are found from `--help` and tried in turn. Results are saved per agent and version, and what's reviewed is the change. A small override is written only for an agent the heuristics can't start, which the run reports · **B** a hand-written `probe` block in each layout | A |
 
 ## Decided
 
