@@ -27,9 +27,7 @@ Not in the docs, so `tools/docsdrift` can't catch them.
 | `hooks/` | (docs example only) | In the layout as `documented = false`: the docs use it in examples, but hooks can live anywhere | Nothing to do unless the docs make it a real location |
 | `$XDG_RUNTIME_DIR/cc-socks` | probe (`docs/probes.md`) | Created on every run, presumably for sockets. Already in the right XDG place, but the layout can't express a root under `$XDG_RUNTIME_DIR` yet: a root's `default` must start with `~/` or `/` | Let roots name an XDG variable, then add it as runtime |
 
-Probe gaps: the to-do step needs a `ToolSearch` call first (Claude Code
-offers its task tools only through it), and plans, checkpoints and debug
-logs need more script steps.
+Probe gap: plans, checkpoints and debug logs need more script steps.
 
 Inside folders the layout already covers, so they move with their parent.
 Listed only so `status` doesn't report them as unknown:
@@ -103,6 +101,16 @@ checked against the settings reference. Both are in
 - **Jev** (`docs/evals/jev-categories.md`): not used for now (decision 22).
   When a Jev version newer than jev-1.14.0 comes out, rerun the
   evaluation with `docs/evals/jev/run.py` and compare.
+- **[probity](https://github.com/nizos/probity)** (MIT, checked 2026-11-07
+  at `eeac421`) hooks into Claude Code, Codex, GitHub Copilot CLI, Copilot
+  Chat and Antigravity CLI to enforce rules. Useful facts, to check against
+  each agent's own docs before a layout uses them:
+  - Copilot CLI: `COPILOT_HOME` moves its folder (default `~/.copilot`), and
+    sessions go to `session-state/<session id>/events.jsonl`.
+  - Codex: hooks are configured in `~/.codex/hooks.json`.
+  - Claude Code, Codex and Antigravity pass `transcript_path` to every hook.
+    Done for Claude Code: the probe's hook records it (`docs/probes.md`).
+    Codex and Antigravity can use the same once they have probes.
 - **The settings check relies on SchemaStore**, which isn't Anthropic's
   documentation. If the schema falls behind the settings reference,
   `docsdrift` misses new settings. A check of the reference itself would
