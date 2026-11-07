@@ -62,6 +62,9 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
   above says, evaluates the layouts through [go-nickel][go-nickel], and
   reports, plans or applies.
 - **Decisions** are recorded in `docs/adr/`.
+- **Probes** (`tools/probe`, with the fake model in `internal/fakemodel`) run
+  an agent through a scripted session in throwaway folders and check its
+  layout against what it writes: see `docs/probes.md`.
 - **What `status` shows** and how it decides each file's state is proposed
   in `docs/status.md`.
 - **Open decisions** are numbered in `docs/decisions.md`, the one place

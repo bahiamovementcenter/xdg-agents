@@ -25,6 +25,11 @@ Not in the docs, so `tools/docsdrift` can't catch them.
 | `state/` | hornicorn, cloud | Holds `mcp-discover-verdicts.json` | Confirm it's the MCP discovery cache's state, then classify (state or cache) |
 | `sessions/*.key` | hornicorn | One per running session, next to `sessions/<pid>.json` | Check it's removed on exit like `sessions/`. Treat as sensitive until known. |
 | `hooks/` | (docs example only) | In the layout as `documented = false`: the docs use it in examples, but hooks can live anywhere | Nothing to do unless the docs make it a real location |
+| `$XDG_RUNTIME_DIR/cc-socks` | probe (`docs/probes.md`) | Created on every run, presumably for sockets. Already in the right XDG place, but the layout can't express a root under `$XDG_RUNTIME_DIR` yet: a root's `default` must start with `~/` or `/` | Let roots name an XDG variable, then add it as runtime |
+
+Probe gaps: the to-do step needs a `ToolSearch` call first (Claude Code
+offers its task tools only through it), and plans, checkpoints and debug
+logs need more script steps.
 
 Inside folders the layout already covers, so they move with their parent.
 Listed only so `status` doesn't report them as unknown:
