@@ -1,8 +1,8 @@
 # `xdg-agents status`
 
-What `status` shows and how it decides. This is a proposal to build from:
-the defaults marked *(proposed)* are recommendations, not decisions yet.
-Settle each one here before or with the code that implements it.
+What `status` shows and how it decides. Its open choices were settled as
+decisions 10 to 17 in `docs/decisions.md` (2026-11-07), and this page
+describes the result.
 
 `status` is read-only. It never opens a file inside an agent's folders. It
 looks only at names, types and symlink targets, so it can't print a
@@ -172,8 +172,18 @@ Paths in JSON are absolute. Text output shortens `$HOME` to `~`.
 
 ## Decisions
 
-The open choices for `status` are numbers 10 to 17 in `docs/decisions.md`.
-The defaults marked *(proposed)* above are the recommended answers there.
+Decided on 2026-11-07, as numbers 10 to 17 in `docs/decisions.md`:
+
+- **Default view:** everything on disk, grouped by category (12).
+- **`--check` and `--json`:** from the start (13, 14).
+- **`--sizes`:** an option, off by default (15).
+- **The desktop app:** listed in full, like every agent (16).
+- **Symbols,** with plain words when not on a terminal or when `NO_COLOR`
+  is set (17).
+- **Files that aren't the agent's own:** their own group, from the layout's
+  `untracked` list (10).
+- **Under investigation:** an `investigating = [{ path, note }]` list in each
+  layout, which `status` reads (11). Not in the schema yet.
 
 ## Not `status`'s job
 

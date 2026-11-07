@@ -71,9 +71,9 @@ checked against the settings reference. Both are in
 
 - **`autoMemoryDirectory`** can move auto memory out of
   `projects/*/memory` into `$XDG_DATA_HOME`, but it names *one* folder.
-  Set in user settings, every project shares a single memory folder. Decide
-  whether `plan` should offer it per project (`.claude/settings.local.json`
-  in each), only mention it, or skip it.
+  Set in user settings, every project shares a single memory folder.
+  Decided (decision 9): `plan` offers it per project, in each project's
+  `.claude/settings.local.json`.
 - **`plansDirectory`** is relative to the project root, so it can't reach
   an XDG folder. `plans/` keeps moving by symlink.
 - **`sshConfigs`** in `~/.claude/settings.json` defines SSH connections for
@@ -86,9 +86,10 @@ checked against the settings reference. Both are in
   top level of `$HOME` against a database of 655 programs. Its
   `programs/Claude Code.json` (checked 2026-11-07, upstream commit
   `ebf481a`) says `~/.claude.json` can't be moved. That's out of date: the
-  claude-directory docs say `CLAUDE_CONFIG_DIR` moves it too. To do: draft
-  an upstream fix for the owner to submit. Later, a `tools/` exporter could
-  turn each layout's roots and variables into xdg-ninja entries.
+  claude-directory docs say `CLAUDE_CONFIG_DIR` moves it too. A fix is drafted in `docs/upstream/xdg-ninja-claude-code.patch`
+  (decision 18), for the owner to submit. A `tools/` exporter that turns each
+  layout's roots and variables into xdg-ninja entries comes after `status`
+  works (decision 19).
 - **[SchemaStore](https://www.schemastore.org)** has settings schemas for
   other agents, a starting point for their layouts. Codex has `log_dir` and
   `sqlite_home` (or `CODEX_SQLITE_HOME`) besides `CODEX_HOME`. Gemini CLI

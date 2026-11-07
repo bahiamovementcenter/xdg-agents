@@ -1,0 +1,20 @@
+diff --git a/programs/Claude Code.json b/programs/Claude Code.json
+index d83248f..54442aa 100644
+--- a/programs/Claude Code.json	
++++ b/programs/Claude Code.json	
+@@ -1,12 +1,12 @@
+ {
+     "files": [
+         {
+-            "help": "Currently unsupported.\n\n_Relevant issue:_ https://github.com/anthropics/claude-code/issues/1455\n",
+-            "movable": false,
++            "help": "Moves together with `~/.claude` when `CLAUDE_CONFIG_DIR` is set: Claude Code then reads `$CLAUDE_CONFIG_DIR/.claude.json` instead.\n\n```bash\nexport CLAUDE_CONFIG_DIR=\"$XDG_CONFIG_HOME\"/claude\nmv ~/.claude.json \"$CLAUDE_CONFIG_DIR\"/.claude.json\n```\n\n_Source:_ https://code.claude.com/docs/en/claude-directory\n",
++            "movable": true,
+             "path": "$HOME/.claude.json"
+         },
+         {
+-            "help": "Export the following environment variables:\n\n```bash\nexport CLAUDE_CONFIG_DIR=\"$XDG_CONFIG_HOME\"/claude\n```\n",
++            "help": "Export the following environment variables:\n\n```bash\nexport CLAUDE_CONFIG_DIR=\"$XDG_CONFIG_HOME\"/claude\n```\n\nWarning: also contains data, state and cache that isn't configuration (session transcripts in `projects/`, `cache/`, `shell-snapshots/`).\n",
+             "movable": true,
+             "path": "$HOME/.claude"
+         }
