@@ -51,12 +51,13 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
 
 ### How it fits together
 
-- **Agent layouts** (`agents/*.ncl`, not written yet): one Nickel file per
-  agent, saying which of its files are configuration, data, state, cache or
-  runtime, and how the agent can be pointed elsewhere (an environment
-  variable, a setting, or only a symlink). `schema.ncl` holds the contract
-  every layout must satisfy, so a mistake in one is reported before the tool
-  runs.
+- **Agent layouts** (`agents/*.ncl`): one Nickel file per agent, saying
+  which of its files are configuration, data, state, cache or runtime, and
+  how the agent can be pointed elsewhere (an environment variable, a
+  setting, or only a symlink). `agents/schema.ncl` holds the contract every
+  layout must satisfy, so a mistake in one is reported before the tool runs.
+  Every fact in a layout comes from the agent's documentation (listed in its
+  `sources`) or is marked `documented = false`.
 - **The tool** (`main.go` for now): resolves the XDG variables as the table
   above says, evaluates the layouts through [go-nickel][go-nickel], and
   reports, plans or applies.
@@ -64,8 +65,10 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
 
 ### Current state
 
-Scaffolding only. `main.go`, `config.ncl` and `schema.ncl` are still the
-`go-nickel` template's greeting example and are to be replaced.
+- `agents/claude-code.ncl`: Claude Code's layout, written from its docs.
+- `main.go`, `config.ncl` and `schema.ncl` (at the top level) are still the
+  `go-nickel` template's greeting example and are to be replaced by code
+  that reads `agents/*.ncl`.
 
 ### First "done" check
 
@@ -103,7 +106,8 @@ go build -o xdg-agents .    # build
 go test ./...               # must pass before a change is done
 go vet ./...                # must pass
 golangci-lint run           # must pass
-nickel typecheck schema.ncl # for any .ncl file you change
+nickel typecheck agents/claude-code.ncl  # and any other .ncl file you change
+nickel export agents/claude-code.ncl     # also runs the contracts
 nix flake check             # when flake.nix changes
 ```
 

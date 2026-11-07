@@ -1,4 +1,4 @@
-module github.com/bahiamovementcenter/xdg-agents-
+module github.com/bahiamovementcenter/xdg-agents
 
 go 1.25.2
 
