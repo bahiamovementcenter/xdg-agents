@@ -177,7 +177,7 @@ func runOnce(bin, name string, relocate bool, timeout time.Duration) (Run, strin
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, bin, "-p", "Run the probe.",
-		"--allowedTools", "Bash Write TodoWrite TaskCreate TaskUpdate")
+		"--allowedTools", "Bash Write ToolSearch TodoWrite TaskCreate TaskUpdate")
 	cmd.Dir = project
 	cmd.Env = []string{"PATH=" + os.Getenv("PATH")}
 	labels := map[string]string{}

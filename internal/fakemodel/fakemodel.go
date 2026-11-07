@@ -4,12 +4,14 @@
 // docs/decisions.md).
 //
 // It speaks the Anthropic Messages API (POST /v1/messages, streaming or
-// not). Each conversation follows one script: for the Nth assistant turn it
-// calls the Nth tool from the script that the agent offers (a harmless shell
-// command, writing a file in the probe's project, a to-do list), then ends
-// with a text naming the tools it was offered and used. Tools are matched by
-// purpose, from their names, so the script works whatever an agent calls
-// them. The script's shape follows the faux provider in pi's ai package.
+// not). Each conversation follows one script: a harmless shell command,
+// writing a file in the probe's project, a to-do list, then a text naming the
+// tools it was offered and used. Tools are matched by purpose, from their
+// names, so the script works whatever an agent calls them. A step whose tool
+// isn't offered is skipped, unless the agent offers a tool search (Claude
+// Code's ToolSearch loads some tools only on request): then the script
+// searches for it first. The script's shape follows the faux provider in
+// pi's ai package.
 package fakemodel
 
 import (
@@ -22,19 +24,24 @@ import (
 	"sync"
 )
 
-// A step the script tries to make the agent take.
+// A step the script tries to make the agent take. Search is what to look
+// for with the agent's tool search when no tool for the step is offered.
 type step struct {
 	purpose string
 	names   *regexp.Regexp
+	search  string
 }
 
 // The script, in order. A step whose purpose the agent has no tool for is
 // skipped.
 var script = []step{
-	{"shell", regexp.MustCompile(`(?i)^(bash|shell|run_shell_command|execute_command|exec_command)$`)},
-	{"write", regexp.MustCompile(`(?i)^(write|write_file|create_file)$`)},
-	{"todo", regexp.MustCompile(`(?i)^(todowrite|taskcreate|todo_write|write_todos|update_plan)$`)},
+	{"shell", regexp.MustCompile(`(?i)^(bash|shell|run_shell_command|execute_command|exec_command)$`), ""},
+	{"write", regexp.MustCompile(`(?i)^(write|write_file|create_file)$`), ""},
+	{"todo", regexp.MustCompile(`(?i)^(todowrite|taskcreate|todo_write|write_todos|update_plan)$`), "todo task list"},
 }
+
+// Tools that load other tools on request.
+var searchTool = regexp.MustCompile(`(?i)^(toolsearch|tool_search|search_tools)$`)
 
 // Server is the fake model. Workdir is the probe's project folder: files
 // the script writes go there, so nothing touches anything else.
@@ -117,22 +124,23 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Strings(offered)
 
-	// How far through the script this conversation is: the number of tool
-	// calls the assistant has made so far. Counting assistant messages
-	// instead fails with Claude Code, which merges consecutive assistant
-	// turns into one message holding several tool calls.
-	turn := 0
+	// The tools already called in this conversation, from its history. The
+	// script works out where it is from these rather than by counting turns:
+	// Claude Code merges consecutive assistant turns into one message, and a
+	// tool search changes the tools on offer mid-conversation.
+	var called []string
 	for _, m := range req.Messages {
 		if m.Role != "assistant" {
 			continue
 		}
 		var blocks []struct {
 			Type string `json:"type"`
+			Name string `json:"name"`
 		}
 		_ = json.Unmarshal(m.Content, &blocks) // a plain string has no tool calls
 		for _, b := range blocks {
 			if b.Type == "tool_use" {
-				turn++
+				called = append(called, b.Name)
 			}
 		}
 	}
@@ -140,8 +148,12 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request) {
 
 	var reply block
 	stop := "end_turn"
-	if t, purpose := s.nthTool(req.Tools, turn); t != nil {
-		reply = block{Type: "tool_use", ID: fmt.Sprintf("toolu_probe_%d", turn), Name: t.Name, Input: s.input(t, purpose)}
+	if t, purpose, query := next(req.Tools, called); t != nil {
+		input := s.input(t, purpose)
+		if query != "" {
+			input = searchInput(t, query)
+		}
+		reply = block{Type: "tool_use", ID: fmt.Sprintf("toolu_probe_%d", len(called)), Name: t.Name, Input: input}
 		stop = "tool_use"
 		e.Called, e.Purpose = t.Name, purpose
 	} else {
@@ -160,21 +172,65 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// nthTool returns the tool for the script's nth applicable step.
-func (s *Server) nthTool(tools []tool, n int) (*tool, string) {
-	i := 0
-	for _, st := range script {
+// next returns the tool for the script's next step, given the tools already
+// called. For a step whose tool isn't offered, it returns the agent's tool
+// search with what to search for, once; if the search didn't bring the tool
+// in, the step is skipped.
+func next(tools []tool, called []string) (*tool, string, string) {
+	done := func(re *regexp.Regexp) bool {
+		for _, c := range called {
+			if re.MatchString(c) {
+				return true
+			}
+		}
+		return false
+	}
+	find := func(re *regexp.Regexp) *tool {
 		for k := range tools {
-			if st.names.MatchString(tools[k].Name) {
-				if i == n {
-					return &tools[k], st.purpose
-				}
-				i++
-				break
+			if re.MatchString(tools[k].Name) {
+				return &tools[k]
+			}
+		}
+		return nil
+	}
+	searched := done(searchTool)
+	for _, st := range script {
+		if done(st.names) {
+			continue
+		}
+		if t := find(st.names); t != nil {
+			return t, st.purpose, ""
+		}
+		if st.search != "" && !searched {
+			if t := find(searchTool); t != nil {
+				return t, "search", st.search
 			}
 		}
 	}
-	return nil, ""
+	return nil, "", ""
+}
+
+// searchInput fills a tool search's string arguments with the query.
+func searchInput(t *tool, query string) json.RawMessage {
+	var schema struct {
+		Required   []string                  `json:"required"`
+		Properties map[string]map[string]any `json:"properties"`
+	}
+	_ = json.Unmarshal(t.InputSchema, &schema)
+	in := map[string]any{}
+	for _, k := range schema.Required {
+		switch schema.Properties[k]["type"] {
+		case "integer", "number":
+			in[k] = 5
+		default:
+			in[k] = query
+		}
+	}
+	if len(schema.Required) == 0 {
+		in["query"] = query
+	}
+	b, _ := json.Marshal(in)
+	return b
 }
 
 func (s *Server) summary(offered []string) string {

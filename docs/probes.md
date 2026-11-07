@@ -10,9 +10,14 @@ and 25 in `docs/decisions.md`).
   the agent offers, matched by purpose:
   1. a harmless shell command (`echo probe`);
   2. writing `probe.txt` in the probe's project folder;
-  3. a to-do list.
+  3. a to-do list. If no to-do tool is offered but a tool search is (Claude
+     Code's `ToolSearch` loads its task tools only on request), it searches
+     for one first, and skips the step if the search brings none in.
 
-  It then ends with a text naming the tools it was offered and called. Its
+  It then ends with a text naming the tools it was offered and called. It
+  works out where it is from the tools already called, not by counting
+  turns, because Claude Code merges consecutive assistant turns and a
+  search changes the tools on offer. Its
   log records only which tools were offered and called, never messages.
 - **`tools/probe`** runs the agent twice in throwaway folders, with a clean
   environment pointing it at the fake model. Each run gets its own `HOME`,
@@ -44,7 +49,7 @@ Claude Code 2.1.319, 2026-11-07, in a Claude Code cloud session.
 
 | Check | Result |
 | :-- | :-- |
-| Both runs finish, using the fake model's tools | ok: 2 tool calls each (shell, write) |
+| Both runs finish, using the fake model's tools | ok: 4 tool calls each (`Bash`, `Write`, `ToolSearch`, `TaskCreate`) |
 | By default, files go to `~/.claude` and `~/.claude.json` | ok |
 | With `CLAUDE_CONFIG_DIR` set, nothing goes to `~/.claude` | ok |
 | With `CLAUDE_CONFIG_DIR` set, `.claude.json` moves into it | ok, as the docs say |
@@ -53,14 +58,11 @@ Claude Code 2.1.319, 2026-11-07, in a Claude Code cloud session.
 | In `$XDG_RUNTIME_DIR` | **`cc-socks`**: undocumented, not in the layout |
 
 On a first run, `~/.claude` gets `backups/`, `plugins/`, `projects/`,
-`session-env/`, `sessions/` and `shell-snapshots/`, and the temp folder gets
-`$TMPDIR/claude-0/`, as the layout says.
+`session-env/`, `sessions/`, `shell-snapshots/` and `tasks/`, and the temp
+folder gets `$TMPDIR/claude-0/`, as the layout says.
 
 **Gaps** (in `docs/follow-ups.md`):
 
-- **The to-do step didn't run.** Claude Code offers its to-do and task tools
-  only through `ToolSearch`, so the script needs a step that calls
-  `ToolSearch` first. Until then, `tasks/` isn't exercised.
 - **One kind of session.** The probe runs `claude -p` once. Files only
   other features create (plans, checkpoints after edits, debug logs)
   need more script steps or flags.
