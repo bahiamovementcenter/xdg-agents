@@ -63,6 +63,42 @@ Chromium side files, such as `Cookies-journal`, `DIPS-wal` and
 `Trust Tokens-journal`, belong to the file they're named after. `status`
 should group them with it rather than list them separately.
 
+## Settings that move files
+
+Found through SchemaStore's schema for Claude Code's `settings.json`, then
+checked against the settings reference. Both are in
+`agents/claude-code.ncl` under `settings`.
+
+- **`autoMemoryDirectory`** can move auto memory out of
+  `projects/*/memory` into `$XDG_DATA_HOME`, but it names *one* folder.
+  Set in user settings, every project shares a single memory folder. Decide
+  whether `plan` should offer it per project (`.claude/settings.local.json`
+  in each), only mention it, or skip it.
+- **`plansDirectory`** is relative to the project root, so it can't reach
+  an XDG folder. `plans/` keeps moving by symlink.
+- **`sshConfigs`** in `~/.claude/settings.json` defines SSH connections for
+  the desktop app's environment picker: a second, documented place where
+  desktop SSH environments can live.
+
+## Other projects
+
+- **[xdg-ninja](https://github.com/b3nj5m1n/xdg-ninja)** (MIT) checks the
+  top level of `$HOME` against a database of 655 programs. Its
+  `programs/Claude Code.json` (checked 2026-11-07, upstream commit
+  `ebf481a`) says `~/.claude.json` can't be moved. That's out of date: the
+  claude-directory docs say `CLAUDE_CONFIG_DIR` moves it too. To do: draft
+  an upstream fix for the owner to submit. Later, a `tools/` exporter could
+  turn each layout's roots and variables into xdg-ninja entries.
+- **[SchemaStore](https://www.schemastore.org)** has settings schemas for
+  other agents, a starting point for their layouts. Codex has `log_dir` and
+  `sqlite_home` (or `CODEX_SQLITE_HOME`) besides `CODEX_HOME`. Gemini CLI
+  has `general.plan.directory` and keeps binaries in `~/.gemini/bin`. Qwen
+  Code, opencode, Aider and Cursor have schemas too.
+- **The settings check relies on SchemaStore**, which isn't Anthropic's
+  documentation. If the schema falls behind the settings reference,
+  `docsdrift` misses new settings. A check of the reference itself would
+  close that gap.
+
 ## Unconfirmed facts
 
 - **Saved environments' names and folders:** most likely in

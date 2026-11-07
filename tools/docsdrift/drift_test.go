@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -163,5 +164,79 @@ func TestCompareIgnoresUndocumentedAndOtherRoots(t *testing.T) {
 	)
 	if r := Compare(l, []string{"projects"}, nil); len(r.GonePaths) != 0 {
 		t.Errorf("GonePaths = %v, want none", r.GonePaths)
+	}
+}
+
+func settingsSchema(names ...string) []byte {
+	props := map[string]any{}
+	for i := 0; i < minSettings; i++ {
+		props[fmt.Sprintf("filler%02d", i)] = map[string]any{"type": "boolean"}
+	}
+	for _, n := range names {
+		props[n] = map[string]any{"type": "string"}
+	}
+	b, _ := json.Marshal(map[string]any{"properties": props})
+	return b
+}
+
+func TestExtractSchemaSettings(t *testing.T) {
+	got, err := ExtractSchemaSettings(settingsSchema("autoMemoryDirectory", "plansDirectory", "model", "cleanupPeriodDays"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"autoMemoryDirectory", "plansDirectory"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+	if _, err := ExtractSchemaSettings([]byte(`{"properties": {"x": {}}}`)); err == nil {
+		t.Error("want a format error for a schema with too few settings")
+	}
+	if _, err := ExtractSchemaSettings([]byte(`not json`)); err == nil {
+		t.Error("want an error for input that isn't JSON")
+	}
+}
+
+func TestCompareSettings(t *testing.T) {
+	l := Layout{
+		Settings:          []Setting{{Name: "autoMemoryDirectory"}, {Name: "removedDirectory"}},
+		UntrackedSettings: []UntrackedEnv{{Name: "ignoredPath"}},
+	}
+	r := CompareSettings(Report{}, l, []string{"autoMemoryDirectory", "ignoredPath", "newCacheDir"})
+	if want := []string{"newCacheDir"}; !reflect.DeepEqual(r.NewSettings, want) {
+		t.Errorf("NewSettings = %v, want %v", r.NewSettings, want)
+	}
+	if want := []string{"removedDirectory"}; !reflect.DeepEqual(r.GoneSettings, want) {
+		t.Errorf("GoneSettings = %v, want %v", r.GoneSettings, want)
+	}
+	if r.Empty() {
+		t.Error("a report with settings drift must not be empty")
+	}
+}
+
+// Cases a line-by-line parser got wrong or only got right by accident.
+func TestExtractDocPathsMarkdownEdgeCases(t *testing.T) {
+	page := directoryPage(
+		"| `pipe\\|dir/` | A pipe inside a code span doesn't split the cell |",
+		"| [`linked/`](#x), `second/` | Code in a link, then more code |",
+	) + "\n## Application data, continued\n\n" +
+		"* [`enableArtifact`](#x) isn't set to `false`\n" +
+		"* `no-colon/` is mentioned without a definition\n" +
+		"* `defined/`: has a colon\n"
+	got, err := ExtractDocPaths(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	set := map[string]bool{}
+	for _, p := range got {
+		set[p] = true
+	}
+	for _, want := range []string{"pipe|dir", "linked", "second", "defined"} {
+		if !set[want] {
+			t.Errorf("missing %q in %v", want, got)
+		}
+	}
+	for _, unwanted := range []string{"pipe", "enableArtifact", "false", "no-colon"} {
+		if set[unwanted] {
+			t.Errorf("unexpected %q in %v", unwanted, got)
+		}
 	}
 }

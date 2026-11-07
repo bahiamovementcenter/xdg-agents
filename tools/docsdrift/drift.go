@@ -1,10 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/yuin/goldmark"
+	gast "github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	east "github.com/yuin/goldmark/extension/ast"
+	"github.com/yuin/goldmark/text"
 )
 
 // Layout is the part of an exported agent layout (agents/*.ncl) the check
@@ -14,6 +21,13 @@ type Layout struct {
 	Paths        []Entry         `json:"paths"`
 	Untracked    []Untracked     `json:"untracked"`
 	UntrackedEnv []UntrackedEnv  `json:"untracked_env"`
+	Settings     []Setting       `json:"settings"`
+	// Same shape as UntrackedEnv: a name and a reason
+	UntrackedSettings []UntrackedEnv `json:"untracked_settings"`
+}
+
+type Setting struct {
+	Name string `json:"name"`
 }
 
 type Root struct {
@@ -44,81 +58,66 @@ const homeRoot = "home"
 const (
 	minDocPaths = 20
 	minEnvVars  = 50
+	minSettings = 50
 )
 
 var (
-	backtick  = regexp.MustCompile("`([^`]+)`")
-	envRow    = regexp.MustCompile("^\\| `([A-Z][A-Z0-9_]*)` \\|")
-	pathLike  = regexp.MustCompile(`(_DIR|_DIRS|_PATH|_FILE|TMPDIR|_HOME)$`)
-	bulletRow = regexp.MustCompile(`^\s*[*-] `)
+	envName  = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+	pathLike = regexp.MustCompile(`(_DIR|_DIRS|_PATH|_FILE|TMPDIR|_HOME)$`)
+	// camelCase setting names that take a path, such as autoMemoryDirectory.
+	// Matching descriptions instead picks up timeouts and toggles that merely
+	// mention a directory.
+	pathSetting = regexp.MustCompile(`(Dir|Directory|Directories|Path|Paths|File|Folder|Location|Home)$`)
 )
 
-// The sections of the directory page that list what is stored under
-// ~/.claude. Everything else on the page (project files, files kept
-// elsewhere, how to clear data) is ignored.
-var directorySections = []string{"## File reference", "## Application data"}
+// The sections (second-level headings) of the directory page that list what
+// is stored under ~/.claude. Everything else on the page (project files,
+// files kept elsewhere, how to clear data) is ignored.
+var directorySections = []string{"File reference", "Application data"}
+
+// GitHub-flavored Markdown, as the docs pages use: tables are an extension.
+var markdown = goldmark.New(goldmark.WithExtensions(extension.Table))
 
 // ExtractDocPaths returns the paths under ~/.claude that the directory page
-// lists, normalized (see normalize), sorted and without duplicates. It reads
-// the first cell of table rows, skipping rows whose Scope column says
-// "Project only", and the backticked names that start a bullet point.
+// lists, normalized (see normalize), sorted and without duplicates. Within
+// the directory sections it reads the code spans in the first cell of each
+// table row, skipping rows whose Scope column says "Project only", and the
+// code spans that start a bullet point, up to its first colon.
 func ExtractDocPaths(md string) ([]string, error) {
+	src := []byte(md)
+	doc := markdown.Parser().Parse(text.NewReader(src))
 	found := map[string]bool{}
+	add := func(codes []string) {
+		for _, c := range codes {
+			if p, ok := normalize(c); ok {
+				found[p] = true
+			}
+		}
+	}
 	inSection := false
-	scopeCol := -1
-	for _, line := range strings.Split(md, "\n") {
-		if strings.HasPrefix(line, "## ") {
-			inSection = false
-			for _, s := range directorySections {
-				if strings.HasPrefix(line, s) {
-					inSection = true
-				}
-			}
-			continue
-		}
-		if !inSection {
-			continue
-		}
-		switch {
-		case strings.HasPrefix(line, "|"):
-			cells := splitRow(line)
-			if isSeparator(cells) {
-				continue
-			}
-			if !strings.Contains(cells[0], "`") {
-				// A header row: remember where the scope column is
-				scopeCol = -1
-				for i, c := range cells {
-					if strings.EqualFold(strings.TrimSpace(c), "Scope") {
-						scopeCol = i
+	for n := doc.FirstChild(); n != nil; n = n.NextSibling() {
+		switch n := n.(type) {
+		case *gast.Heading:
+			if n.Level == 2 {
+				title := strings.TrimSpace(plainText(n, src))
+				inSection = false
+				for _, s := range directorySections {
+					if strings.HasPrefix(title, s) {
+						inSection = true
 					}
 				}
-				continue
 			}
-			if scopeCol >= 0 && scopeCol < len(cells) &&
-				strings.Contains(strings.ToLower(cells[scopeCol]), "project only") {
-				continue
-			}
-			for _, m := range backtick.FindAllStringSubmatch(cells[0], -1) {
-				if p, ok := normalize(m[1]); ok {
-					found[p] = true
+		case *east.Table:
+			if inSection {
+				for _, row := range tableRows(n, src) {
+					add(row)
 				}
 			}
-		case bulletRow.MatchString(line):
-			// Only names before the first colon: "`jobs/` and `daemon/`: ..."
-			head, _, _ := strings.Cut(bulletRow.ReplaceAllString(line, ""), ":")
-			head = strings.TrimPrefix(strings.TrimSpace(head), "**")
-			if !strings.HasPrefix(head, "`") {
-				continue
-			}
-			for _, m := range backtick.FindAllStringSubmatch(head, -1) {
-				if p, ok := normalize(m[1]); ok {
-					found[p] = true
+		case *gast.List:
+			if inSection {
+				for item := n.FirstChild(); item != nil; item = item.NextSibling() {
+					add(bulletHead(item, src))
 				}
-			}
-		default:
-			if strings.TrimSpace(line) == "" {
-				scopeCol = -1
 			}
 		}
 	}
@@ -129,25 +128,169 @@ func ExtractDocPaths(md string) ([]string, error) {
 	return paths, nil
 }
 
-// ExtractDocEnv returns the path-like environment variables (names ending in
-// _DIR, _PATH, _FILE and so on) that the env-vars page lists.
-func ExtractDocEnv(md string) ([]string, error) {
-	all := map[string]bool{}
-	pathy := map[string]bool{}
-	for _, line := range strings.Split(md, "\n") {
-		m := envRow.FindStringSubmatch(line)
-		if m == nil {
+// tableRows returns, for each body row of t, the code spans in its first
+// cell, leaving out rows whose Scope column (if t has one) says "Project
+// only".
+func tableRows(t *east.Table, src []byte) [][]string {
+	scopeCol := -1
+	var rows [][]string
+	for r := t.FirstChild(); r != nil; r = r.NextSibling() {
+		var cells []gast.Node
+		for c := r.FirstChild(); c != nil; c = c.NextSibling() {
+			cells = append(cells, c)
+		}
+		if _, header := r.(*east.TableHeader); header {
+			for i, c := range cells {
+				if strings.EqualFold(strings.TrimSpace(plainText(c, src)), "Scope") {
+					scopeCol = i
+				}
+			}
 			continue
 		}
-		all[m[1]] = true
-		if pathLike.MatchString(m[1]) {
-			pathy[m[1]] = true
+		if len(cells) == 0 {
+			continue
+		}
+		if scopeCol >= 0 && scopeCol < len(cells) &&
+			strings.Contains(strings.ToLower(plainText(cells[scopeCol], src)), "project only") {
+			continue
+		}
+		rows = append(rows, codeSpans(cells[0], src))
+	}
+	return rows
+}
+
+// bulletHead returns the names a definition-style bullet opens with, before
+// its colon: "`jobs/` and `daemon/`: ..." gives jobs/ and daemon/, and
+// "**`sessions/`**: ..." gives sessions/. A bullet that opens with words or a
+// link ("**macOS**: `/private/tmp/...`", "[`enableArtifact`](...) isn't set
+// to `false`"), or has no colon, gives nothing.
+func bulletHead(item gast.Node, src []byte) []string {
+	block := item.FirstChild()
+	if block == nil {
+		return nil
+	}
+	var codes []string
+	opened, colon, rejected := false, false, false
+	var walk func(n gast.Node)
+	walk = func(n gast.Node) {
+		for c := n.FirstChild(); c != nil && !colon && !rejected; c = c.NextSibling() {
+			switch c := c.(type) {
+			case *gast.CodeSpan:
+				opened = true
+				codes = append(codes, plainText(c, src))
+			case *gast.Text:
+				t := string(c.Segment.Value(src))
+				if !opened && strings.TrimSpace(t) != "" {
+					rejected = true
+					return
+				}
+				if strings.Contains(t, ":") {
+					colon = true
+				}
+			case *gast.Emphasis:
+				walk(c)
+			default:
+				if !opened {
+					rejected = true
+					return
+				}
+			}
 		}
 	}
+	walk(block)
+	if rejected || !colon {
+		return nil
+	}
+	return codes
+}
+
+// ExtractDocEnv returns the path-like environment variables (names ending in
+// _DIR, _PATH, _FILE and so on) that the env-vars page lists: the variables
+// named by a code span in the first cell of a table row.
+func ExtractDocEnv(md string) ([]string, error) {
+	src := []byte(md)
+	doc := markdown.Parser().Parse(text.NewReader(src))
+	all := map[string]bool{}
+	pathy := map[string]bool{}
+	_ = gast.Walk(doc, func(n gast.Node, entering bool) (gast.WalkStatus, error) {
+		t, ok := n.(*east.Table)
+		if !entering || !ok {
+			return gast.WalkContinue, nil
+		}
+		for _, codes := range tableRows(t, src) {
+			for _, name := range codes {
+				if envName.MatchString(name) {
+					all[name] = true
+					if pathLike.MatchString(name) {
+						pathy[name] = true
+					}
+				}
+			}
+		}
+		return gast.WalkSkipChildren, nil
+	})
 	if len(all) < minEnvVars {
 		return nil, fmt.Errorf("found only %d variables on the env-vars page (expected at least %d): its format has probably changed, so update ExtractDocEnv", len(all), minEnvVars)
 	}
 	return sortedKeys(pathy), nil
+}
+
+// codeSpans returns the text of every code span inside n, in order,
+// including ones inside links and emphasis.
+func codeSpans(n gast.Node, src []byte) []string {
+	var codes []string
+	_ = gast.Walk(n, func(c gast.Node, entering bool) (gast.WalkStatus, error) {
+		if cs, ok := c.(*gast.CodeSpan); ok && entering {
+			codes = append(codes, plainText(cs, src))
+			return gast.WalkSkipChildren, nil
+		}
+		return gast.WalkContinue, nil
+	})
+	return codes
+}
+
+// plainText returns the text inside n, without Markdown markup.
+func plainText(n gast.Node, src []byte) string {
+	var b strings.Builder
+	_ = gast.Walk(n, func(c gast.Node, entering bool) (gast.WalkStatus, error) {
+		if !entering {
+			return gast.WalkContinue, nil
+		}
+		switch c := c.(type) {
+		case *gast.Text:
+			b.Write(c.Segment.Value(src))
+			if c.SoftLineBreak() {
+				b.WriteByte(' ')
+			}
+		case *gast.String:
+			b.Write(c.Value)
+		}
+		return gast.WalkContinue, nil
+	})
+	return b.String()
+}
+
+// ExtractSchemaSettings returns the top-level settings in a JSON Schema for
+// the agent's settings file whose names say they take a path. Nested ones
+// (marketplace sources, sandbox binaries) configure other things, not where
+// the agent stores its own files.
+func ExtractSchemaSettings(schema []byte) ([]string, error) {
+	var s struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(schema, &s); err != nil {
+		return nil, fmt.Errorf("not a JSON Schema: %w", err)
+	}
+	if len(s.Properties) < minSettings {
+		return nil, fmt.Errorf("found only %d settings in the schema (expected at least %d): its format has probably changed, so update ExtractSchemaSettings", len(s.Properties), minSettings)
+	}
+	found := map[string]bool{}
+	for name := range s.Properties {
+		if pathSetting.MatchString(name) {
+			found[name] = true
+		}
+	}
+	return sortedKeys(found), nil
 }
 
 // normalize turns a name from the docs into a path relative to ~/.claude:
@@ -183,10 +326,16 @@ type Report struct {
 	NewEnv []string
 	// Variables the layout uses or lists that the docs no longer list
 	GoneEnv []string
+	// Path-like settings in the schema that the layout neither uses nor
+	// lists as untracked
+	NewSettings []string
+	// Settings the layout uses or lists that the schema no longer lists
+	GoneSettings []string
 }
 
 func (r Report) Empty() bool {
-	return len(r.NewPaths)+len(r.GonePaths)+len(r.NewEnv)+len(r.GoneEnv) == 0
+	return len(r.NewPaths)+len(r.GonePaths)+len(r.NewEnv)+len(r.GoneEnv)+
+		len(r.NewSettings)+len(r.GoneSettings) == 0
 }
 
 // Compare checks a layout against the paths and variables from the docs.
@@ -266,6 +415,31 @@ func Compare(l Layout, docPaths, docEnv []string) Report {
 	return r
 }
 
+// CompareSettings checks the layout's settings against the path-like
+// settings from the agent's settings schema, and adds the result to r.
+func CompareSettings(r Report, l Layout, schemaSettings []string) Report {
+	known := map[string]bool{}
+	for _, s := range l.Settings {
+		known[s.Name] = true
+	}
+	for _, u := range l.UntrackedSettings {
+		known[u.Name] = true
+	}
+	inSchema := map[string]bool{}
+	for _, s := range schemaSettings {
+		inSchema[s] = true
+		if !known[s] {
+			r.NewSettings = append(r.NewSettings, s)
+		}
+	}
+	for _, s := range sortedKeys(known) {
+		if !inSchema[s] {
+			r.GoneSettings = append(r.GoneSettings, s)
+		}
+	}
+	return r
+}
+
 // contains reports whether path p is q or a folder that q is inside,
 // comparing whole components ("plugins" contains "plugins/.trash" but not
 // "plugins-old").
@@ -289,22 +463,6 @@ func anyContainedBy(qs []string, p string) bool {
 		}
 	}
 	return false
-}
-
-func splitRow(line string) []string {
-	line = strings.TrimSpace(line)
-	line = strings.TrimPrefix(line, "|")
-	line = strings.TrimSuffix(line, "|")
-	return strings.Split(line, "|")
-}
-
-func isSeparator(cells []string) bool {
-	for _, c := range cells {
-		if strings.Trim(strings.TrimSpace(c), ":-") != "" {
-			return false
-		}
-	}
-	return true
 }
 
 func sortedKeys(m map[string]bool) []string {

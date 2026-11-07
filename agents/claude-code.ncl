@@ -15,6 +15,8 @@ let { Layout, .. } = import "schema.ncl" in
     "https://code.claude.com/docs/en/managed-settings",
     "https://code.claude.com/docs/en/env-vars",
     "https://code.claude.com/docs/en/settings-reference",
+    "https://code.claude.com/docs/en/memory",
+    "https://www.schemastore.org/claude-code-settings.json",
     "https://code.claude.com/docs/en/hooks-guide",
   ],
 
@@ -104,7 +106,7 @@ let { Layout, .. } = import "schema.ncl" in
       cleanup = 'swept,
       sensitive = true,
       holds = "Session transcripts per project (plaintext), swept after cleanupPeriodDays (30 by default)",
-      note = "Also holds projects/*/memory (auto memory, kept), which is data but can only move with this folder. With CLAUDE_CONFIG_DIR set, CLAUDE_CODE_PROJECT_DIR_NAME chooses a session's subfolder name here; it doesn't move anything.",
+      note = "Also holds projects/*/memory (auto memory, kept), which is data: only the autoMemoryDirectory setting can move it on its own (see settings). With CLAUDE_CONFIG_DIR set, CLAUDE_CODE_PROJECT_DIR_NAME chooses a session's subfolder name here; it doesn't move anything.",
     },
     { root = "home", path = "history.jsonl", kind = 'file, category = 'state, move = 'with_root, cleanup = 'kept, sensitive = true, holds = "Prompt history (up-arrow, Ctrl+R)", note = "A file, so it can't be symlinked out; stays with the configuration." },
     { root = "home", path = "file-history", kind = 'dir, category = 'state, move = 'symlink, cleanup = 'swept, holds = "Pre-edit snapshots for checkpoint restore" },
@@ -145,6 +147,21 @@ let { Layout, .. } = import "schema.ncl" in
     { root = "managed", path = "managed-settings.json", kind = 'file, category = 'config, move = 'fixed, holds = "Managed settings" },
     { root = "managed", path = "managed-settings.d", kind = 'dir, category = 'config, move = 'fixed, holds = "Managed settings drop-ins" },
     { root = "managed", path = "managed-mcp.json", kind = 'file, category = 'config, move = 'fixed, holds = "Managed MCP servers" },
+  ],
+
+  settings = [
+    {
+      name = "autoMemoryDirectory",
+      moves = "projects/*/memory",
+      for_xdg = 'with_caveat,
+      note = "Takes an absolute or ~/ path, so it can point into $XDG_DATA_HOME. But it names one folder: set in user settings, every project shares a single auto memory folder instead of one each. To keep them separate, it has to be set per project (in .claude/settings.local.json).",
+    },
+    {
+      name = "plansDirectory",
+      moves = "plans",
+      for_xdg = 'no,
+      note = "Resolved relative to the project root, so it can only put plans inside the project, never under $XDG_STATE_HOME.",
+    },
   ],
 
   untracked_env = [

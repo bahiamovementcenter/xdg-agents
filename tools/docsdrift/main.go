@@ -6,7 +6,11 @@
 //
 //	nickel export agents/claude-code.ncl > layout.json
 //	go run ./tools/docsdrift -layout layout.json \
-//	  -directory-doc claude-directory.md -env-doc env-vars.md
+//	  -directory-doc claude-directory.md -env-doc env-vars.md \
+//	  -settings-schema claude-code-settings.json
+//
+// -settings-schema is optional: a JSON Schema for the agent's settings
+// file (from SchemaStore), used to find settings that move files.
 //
 // Exit status: 0 no drift, 1 drift found, 2 the check couldn't run (bad
 // input, or a docs page whose format has changed).
@@ -25,13 +29,14 @@ func main() {
 	layoutPath := flag.String("layout", "", "the layout, exported as JSON (nickel export)")
 	dirDoc := flag.String("directory-doc", "", "the agent's directory documentation page (Markdown)")
 	envDoc := flag.String("env-doc", "", "the agent's environment variables page (Markdown)")
+	settingsSchema := flag.String("settings-schema", "", "optional: a JSON Schema for the agent's settings file")
 	flag.Parse()
 	if *layoutPath == "" || *dirDoc == "" || *envDoc == "" {
 		flag.Usage()
 		os.Exit(2)
 	}
 
-	report, err := run(*layoutPath, *dirDoc, *envDoc)
+	report, err := run(*layoutPath, *dirDoc, *envDoc, *settingsSchema)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "docsdrift:", err)
 		os.Exit(2)
@@ -51,7 +56,7 @@ func main() {
 	}
 }
 
-func run(layoutPath, dirDoc, envDoc string) (Report, error) {
+func run(layoutPath, dirDoc, envDoc, settingsSchema string) (Report, error) {
 	raw, err := os.ReadFile(layoutPath)
 	if err != nil {
 		return Report{}, err
@@ -79,12 +84,24 @@ func run(layoutPath, dirDoc, envDoc string) (Report, error) {
 		return Report{}, fmt.Errorf("%s: %w", envDoc, err)
 	}
 
-	return Compare(layout, docPaths, docEnv), nil
+	report := Compare(layout, docPaths, docEnv)
+	if settingsSchema == "" {
+		return report, nil
+	}
+	schema, err := os.ReadFile(settingsSchema)
+	if err != nil {
+		return Report{}, err
+	}
+	settings, err := ExtractSchemaSettings(schema)
+	if err != nil {
+		return Report{}, fmt.Errorf("%s: %w", settingsSchema, err)
+	}
+	return CompareSettings(report, layout, settings), nil
 }
 
 func format(r Report) string {
 	if r.Empty() {
-		return "No drift: the layout covers every path and path-like variable the docs list.\n"
+		return "No drift: the layout covers every path, path-like variable and path-like setting the docs and schema list.\n"
 	}
 	var b strings.Builder
 	section := func(title string, items []string) {
@@ -101,5 +118,7 @@ func format(r Report) string {
 	section("Layout paths the docs no longer list (removed, renamed, or now undocumented)", r.GonePaths)
 	section("Path-like variables the docs list that the layout doesn't mention (use them, or list them under untracked_env)", r.NewEnv)
 	section("Variables in the layout that the docs no longer list", r.GoneEnv)
+	section("Path-like settings the schema lists that the layout doesn't mention (add them under settings, or untracked_settings)", r.NewSettings)
+	section("Settings in the layout that the schema no longer lists", r.GoneSettings)
 	return b.String()
 }

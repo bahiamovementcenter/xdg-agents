@@ -1,8 +1,9 @@
 name: Docs drift
 
-# Compares agents/claude-code.ncl with Claude Code's documentation. Fails
-# when the docs list a path or path-like variable the layout doesn't cover,
-# or stop listing one it relies on. It only detects: what a new path is gets
+# Compares agents/claude-code.ncl with Claude Code's documentation and its
+# settings schema on SchemaStore. Fails when they list a path, path-like
+# variable or path-like setting the layout doesn't cover, or stop listing
+# one it relies on. It only detects: what a new path is gets
 # decided in a reviewed change to the layout.
 
 on:
@@ -39,6 +40,9 @@ jobs:
               -o "$RUNNER_TEMP/docs/$page.md" \
               "https://code.claude.com/docs/en/$page.md"
           done
+          curl --fail --silent --show-error --location --retry 3 \
+            -o "$RUNNER_TEMP/docs/claude-code-settings.json" \
+            "https://www.schemastore.org/claude-code-settings.json"
 
       - name: Export the layout
         run: nix develop --command nickel export agents/claude-code.ncl > "$RUNNER_TEMP/layout.json"
@@ -51,4 +55,5 @@ jobs:
           nix develop --command "$RUNNER_TEMP/docsdrift" \
             -layout "$RUNNER_TEMP/layout.json" \
             -directory-doc "$RUNNER_TEMP/docs/claude-directory.md" \
-            -env-doc "$RUNNER_TEMP/docs/env-vars.md"
+            -env-doc "$RUNNER_TEMP/docs/env-vars.md" \
+            -settings-schema "$RUNNER_TEMP/docs/claude-code-settings.json"
