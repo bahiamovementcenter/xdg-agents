@@ -12,7 +12,10 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 
 ## Open
 
-None right now.
+| # | Question | Options | Recommended |
+| :-- | :-- | :-- | :-- |
+| 22 | After the evaluation in `docs/evals/jev-categories.md` (69% agreement from descriptions, confidence not reliable), should the drift workflow use Jev? | **A** advisory only: when drift finds a new path, show Jev's pick and probabilities (from the docs' description, never the path) next to the docs text; never write the layout. Needs `TYPESAFE_API_KEY` as a GitHub secret · **B** not now: rerun the evaluation when a new Jev version comes out · **C** drop it | B |
+| 23 | Reclassify `shell-snapshots/` in `agents/claude-code.ncl` from state to runtime? The docs say it's removed on a clean exit, the same as `sessions/`, which is already runtime. Jev's most confident disagreement (0.86). | **A** runtime · **B** keep state | A |
 
 ## Decided
 
@@ -60,3 +63,9 @@ the design, it's recorded in the place it names: ADR-0001 to ADR-0004,
 | 18 | xdg-ninja says `~/.claude.json` can't be moved, which is out of date | **A** Claude drafts the fix as a patch for you to submit · **B** leave it | **A** (2026-11-07) |
 | 19 | A `tools/` exporter that turns our layouts into xdg-ninja entries | **A** after `status` works · **B** now · **C** never | **A** (2026-11-07) |
 | 20 | A CI job that installs the desktop app on GitHub's macOS and Linux machines and lists its folder on first launch | **A** no: signed out, it can't show sessions or environments · **B** yes | **A** (2026-11-07) |
+
+### Tools
+
+| # | Question | Options | Answer |
+| :-- | :-- | :-- | :-- |
+| 21 | Use Jev (TypeSafe's typed decision model) to propose a category for each new path the drift check finds, from the docs' own description, for a person to review? Never inside `xdg-agents` at run time. | **A** evaluate first: run it over the 49 reviewed Claude Code entries and measure agreement and confidence · **B** add it to the drift workflow now (needs `TYPESAFE_API_KEY` as a GitHub secret) · **C** don't use it | **A** (2026-11-07) |
