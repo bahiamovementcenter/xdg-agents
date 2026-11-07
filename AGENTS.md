@@ -62,6 +62,8 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
   above says, evaluates the layouts through [go-nickel][go-nickel], and
   reports, plans or applies.
 - **Decisions** are recorded in `docs/adr/`.
+- **What `status` shows** and how it decides each file's state is proposed
+  in `docs/status.md`.
 - **Open items** (unknown files seen on disk, unconfirmed facts, decisions
   still to make) are tracked in `docs/follow-ups.md`. Settle one by moving it
   into a layout or an ADR, and delete it there in the same change.
