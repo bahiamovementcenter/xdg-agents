@@ -1,84 +1,75 @@
-// probe runs an agent through a scripted session against the fake model
+// probe runs any agent through a scripted session against the fake model
 // (internal/fakemodel) and records what it leaves on disk: names, types and
-// symlink targets only, never contents (decision 24 in docs/decisions.md).
+// symlink targets only, never contents (decisions 24 to 26 in
+// docs/decisions.md).
 //
-// Each run gets a throwaway root with its own HOME, XDG directories, TMPDIR
-// and project folder, and a clean environment, so nothing from the real
-// home or session leaks in. The agent runs twice: with its defaults, and
-// with its config variable set, to check that the variable moves what the
-// layout says it does.
+// Nothing is written per agent. From the agent's own --help, the probe works
+// out how to run it once non-interactively and how to let it use tools, and
+// tries each way until one reaches the fake model. Every common model
+// variable points at the fake model at once, which tells the protocol from
+// the request path. Each candidate *_HOME / *_CONFIG_DIR variable (from the
+// layout, the help, or the command's name) gets a run of its own, to see
+// what it moves.
 //
-//	go run ./tools/probe -layout layout.json -out probe.json
+// Every run gets a throwaway root with its own HOME, XDG directories, TMPDIR
+// and project folder, and a clean environment. An agent that takes a
+// --settings file also gets a hook that records the transcript_path it
+// passes, so the agent itself says where its transcript is.
 //
-// Each run also gives the agent a hook, through --settings from outside its
-// own folders, that records the transcript_path the agent passes to hooks:
-// the agent itself says where its transcript is. The hook is this program
-// in -record-hook mode, which writes down only the event name and that path.
-//
-// Only Claude Code is supported so far.
+//	go run ./tools/probe -agent claude -layout layout.json -out probe.json
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
-	"io/fs"
-	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
-
-	"github.com/bahiamovementcenter/xdg-agents/internal/fakemodel"
 )
-
-// The variables under a throwaway root, and the label each is reported as.
-var places = []struct{ label, rel string }{
-	{"$XDG_CONFIG_HOME", "xdg/config"},
-	{"$XDG_DATA_HOME", "xdg/data"},
-	{"$XDG_STATE_HOME", "xdg/state"},
-	{"$XDG_CACHE_HOME", "xdg/cache"},
-	{"$XDG_RUNTIME_DIR", "xdg/runtime"},
-	{"$TMPDIR", "tmp"},
-	{"$PROJECT", "project"},
-	{"$CLAUDE_CONFIG_DIR", "relocated"},
-	{"~", "home"}, // last: the others aren't inside it, but keep it the fallback
-}
-
-// Entry is one thing found on disk after a run.
-type Entry struct {
-	Path   string `json:"path"`
-	Kind   string `json:"kind"` // dir, file, symlink
-	Target string `json:"target,omitempty"`
-}
-
-// Run is the result of one run of the agent.
-type Run struct {
-	Name     string            `json:"name"`
-	Env      map[string]string `json:"env"` // the variables that were set, as labels
-	ExitCode int               `json:"exit_code"`
-	TimedOut bool              `json:"timed_out,omitempty"`
-	Model    []fakemodel.Event `json:"model_requests"`
-	// The transcript paths the agent passed to its hooks, as labels
-	Transcripts []string `json:"transcripts"`
-	Entries     []Entry  `json:"entries"`
-}
 
 // Report is the probe's output.
 type Report struct {
-	Agent   string   `json:"agent"`
-	Version string   `json:"version"`
-	Runs    []Run    `json:"runs"`
-	Checks  []Check  `json:"checks"`
-	Unknown []string `json:"unknown"` // under the agent's root, matched by no layout entry
+	Agent   string `json:"agent"`
+	Version string `json:"version"`
+	// The invocation that reached the fake model, or none
+	Invocation []string `json:"invocation"`
+	// Every invocation tried, and how far it got
+	Attempts []Attempt `json:"attempts"`
+	// The default run, then one per config variable tried
+	Runs      []Run      `json:"runs"`
+	Protocols []string   `json:"protocols"`
+	Moves     []Move     `json:"moves"`
+	Checks    []Check    `json:"checks"`
+	Unknown   []string   `json:"unknown"`
+	XDG       []XDGUsage `json:"xdg"`
 }
 
-// Check is one claim from the layout, tested against the runs.
+// Attempt is one way of running the agent that was tried.
+type Attempt struct {
+	Args     []string `json:"args"`
+	Requests int      `json:"model_requests"`
+	ExitCode int      `json:"exit_code"`
+	TimedOut bool     `json:"timed_out,omitempty"`
+}
+
+// Move is what setting one variable did to what the default run created in
+// the home folder.
+type Move struct {
+	Var    string   `json:"var"`
+	Moved  []string `json:"moved"`  // gone from ~ and present under the variable's folder
+	Stayed []string `json:"stayed"` // still created in ~
+}
+
+// XDGUsage is what the default run put in one XDG directory.
+type XDGUsage struct {
+	Dir     string   `json:"dir"`
+	Entries []string `json:"entries"`
+}
+
+// Check is one claim, tested against the runs.
 type Check struct {
 	Claim string `json:"claim"`
 	OK    bool   `json:"ok"`
@@ -86,10 +77,11 @@ type Check struct {
 }
 
 func main() {
-	agent := flag.String("agent", "claude", "the agent's command (only claude is supported)")
+	agent := flag.String("agent", "", "the agent's command, such as claude or codex")
 	layoutPath := flag.String("layout", "", "optional: the agent's layout, exported as JSON, to compare with")
 	out := flag.String("out", "", "write the report as JSON here (default: stdout)")
 	timeout := flag.Duration("timeout", 2*time.Minute, "how long one run may take")
+	maxVars := flag.Int("max-vars", 4, "how many candidate config variables to try")
 	keep := flag.Bool("keep", false, "keep the throwaway roots, and print where they are")
 	recordHook := flag.String("record-hook", "", "internal: run as the agent's hook, appending to this file")
 	flag.Parse()
@@ -97,40 +89,69 @@ func main() {
 		recordHookCall(*recordHook)
 		return
 	}
-	if *agent != "claude" {
-		fail(fmt.Errorf("only claude is supported so far, not %q", *agent))
+	if *agent == "" {
+		fail(fmt.Errorf("-agent is required"))
 	}
-
 	bin, err := exec.LookPath(*agent)
 	if err != nil {
 		fail(err)
 	}
-	version, _ := exec.Command(bin, "--version").Output()
 
-	report := Report{Agent: *agent, Version: strings.TrimSpace(string(version))}
-	for _, variant := range []struct {
-		name     string
-		relocate bool
-	}{{"defaults", false}, {"CLAUDE_CONFIG_DIR set", true}} {
-		run, root, err := runOnce(bin, variant.name, variant.relocate, *timeout)
-		if err != nil {
-			fail(fmt.Errorf("%s: %w", variant.name, err))
-		}
-		report.Runs = append(report.Runs, run)
-		if *keep {
-			fmt.Fprintf(os.Stderr, "probe: %s kept in %s\n", variant.name, root)
-		} else {
-			_ = os.RemoveAll(root)
+	var lay *layout
+	if *layoutPath != "" {
+		if lay, err = loadLayout(*layoutPath); err != nil {
+			fail(err)
 		}
 	}
 
-	report.Checks = checks(report.Runs)
-	if *layoutPath != "" {
-		paths, err := layoutPaths(*layoutPath)
+	p := &prober{bin: bin, timeout: *timeout, keep: *keep}
+	help := p.help()
+	report := Report{Agent: *agent, Version: p.version()}
+
+	// Find a way to run the agent once that reaches the fake model
+	perm := permissionArgs(help)
+	settings := supportsSettings(help)
+	var def *Run
+	for _, inv := range invocations(help) {
+		run, err := p.run("defaults", inv, perm, settings, nil)
 		if err != nil {
 			fail(err)
 		}
-		report.Unknown = unknown(report.Runs[0], paths)
+		report.Attempts = append(report.Attempts, Attempt{Args: inv, Requests: len(run.Model), ExitCode: run.ExitCode, TimedOut: run.TimedOut})
+		if len(run.Model) > 0 {
+			report.Invocation = inv
+			def = &run
+			break
+		}
+		if def == nil {
+			def = &run // keep a listing even if no session started
+		}
+	}
+	report.Runs = append(report.Runs, *def)
+	report.Protocols = protocols(*def)
+
+	// Try each config variable on its own run
+	vars := configVars(help, filepath.Base(*agent), lay.envVars())
+	if len(vars) > *maxVars {
+		vars = vars[:*maxVars]
+	}
+	inv := report.Invocation
+	if inv == nil {
+		inv = []string{promptMark}
+	}
+	for _, v := range vars {
+		run, err := p.run(v+" set", inv, perm, settings, &v)
+		if err != nil {
+			fail(err)
+		}
+		report.Runs = append(report.Runs, run)
+		report.Moves = append(report.Moves, move(*def, run, v))
+	}
+
+	report.XDG = xdgUsage(*def)
+	report.Checks = checks(report, lay)
+	if lay != nil {
+		report.Unknown = lay.unknown(*def)
 	}
 
 	b, _ := json.MarshalIndent(report, "", "  ")
@@ -142,342 +163,82 @@ func main() {
 	printSummary(report)
 }
 
-func runOnce(bin, name string, relocate bool, timeout time.Duration) (Run, string, error) {
-	root, err := os.MkdirTemp("", "xdg-agents-probe-")
-	if err != nil {
-		return Run{}, "", err
-	}
-	for _, p := range places {
-		if p.label == "$CLAUDE_CONFIG_DIR" && !relocate {
-			continue
-		}
-		if err := os.MkdirAll(filepath.Join(root, p.rel), 0o700); err != nil {
-			return Run{}, root, err
-		}
-	}
-
-	project := filepath.Join(root, "project")
-	model := &fakemodel.Server{Workdir: project}
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return Run{}, root, err
-	}
-	srv := &http.Server{Handler: model, ReadHeaderTimeout: 10 * time.Second}
-	go func() { _ = srv.Serve(ln) }()
-	defer func() { _ = srv.Close() }()
-
-	// A clean environment: only what the agent needs, so nothing from the
-	// real home or session leaks in
-	env := map[string]string{
-		"HOME":                filepath.Join(root, "home"),
-		"XDG_CONFIG_HOME":     filepath.Join(root, "xdg/config"),
-		"XDG_DATA_HOME":       filepath.Join(root, "xdg/data"),
-		"XDG_STATE_HOME":      filepath.Join(root, "xdg/state"),
-		"XDG_CACHE_HOME":      filepath.Join(root, "xdg/cache"),
-		"XDG_RUNTIME_DIR":     filepath.Join(root, "xdg/runtime"),
-		"TMPDIR":              filepath.Join(root, "tmp"),
-		"ANTHROPIC_BASE_URL":  "http://" + ln.Addr().String(),
-		"ANTHROPIC_API_KEY":   "probe-not-a-real-key",
-		"DISABLE_AUTOUPDATER": "1",
-		"DISABLE_TELEMETRY":   "1",
-		"CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
-	}
-	if relocate {
-		env["CLAUDE_CONFIG_DIR"] = filepath.Join(root, "relocated")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	// The probe's own files live in root/probe, which list() skips
-	own := filepath.Join(root, "probe")
-	if err := os.MkdirAll(own, 0o700); err != nil {
-		return Run{}, root, err
-	}
-	hookLog := filepath.Join(own, "hooks.jsonl")
-	settings, err := hookSettings(hookLog)
-	if err != nil {
-		return Run{}, root, err
-	}
-	settingsFile := filepath.Join(own, "settings.json")
-	if err := os.WriteFile(settingsFile, settings, 0o600); err != nil {
-		return Run{}, root, err
-	}
-
-	cmd := exec.CommandContext(ctx, bin, "-p", "Run the probe.",
-		"--settings", settingsFile,
-		"--allowedTools", "Bash Write ToolSearch TodoWrite TaskCreate TaskUpdate")
-	cmd.Dir = project
-	cmd.Env = []string{"PATH=" + os.Getenv("PATH")}
-	labels := map[string]string{}
-	for k, v := range env {
-		cmd.Env = append(cmd.Env, k+"="+v)
-		labels[k] = label(root, v)
-	}
-	labels["ANTHROPIC_BASE_URL"] = "http://127.0.0.1:<port> (fake model)"
-	// The agent's output stays out of the report: only the exit status counts
-	cmd.Stdout, cmd.Stderr = nil, nil
-
-	run := Run{Name: name, Env: labels}
-	err = cmd.Run()
-	var exit *exec.ExitError
-	switch {
-	case ctx.Err() != nil:
-		run.TimedOut, run.ExitCode = true, -1
-	case errors.As(err, &exit):
-		run.ExitCode = exit.ExitCode()
-	case err != nil:
-		return run, root, err
-	}
-	run.Model = model.Log()
-	run.Transcripts = hookTranscripts(root, hookLog)
-	run.Entries, err = list(root)
-	return run, root, err
-}
-
-// list walks root and reports every entry by label, without opening files.
-func list(root string) ([]Entry, error) {
-	var entries []Entry
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, _ := filepath.Rel(root, path)
-		if rel == "." {
-			return nil
-		}
-		if rel == "probe" {
-			return fs.SkipDir // the probe's own settings and hook log
-		}
-		for _, p := range places {
-			if rel == p.rel || rel == "xdg" { // the places themselves
-				return nil
-			}
-		}
-		e := Entry{Path: label(root, path), Kind: "file"}
-		switch {
-		case d.Type()&fs.ModeSymlink != 0:
-			e.Kind = "symlink"
-			if t, err := os.Readlink(path); err == nil {
-				e.Target = label(root, t)
-			}
-		case d.IsDir():
-			e.Kind = "dir"
-		}
-		entries = append(entries, e)
-		return nil
-	})
-	sort.Slice(entries, func(i, j int) bool { return entries[i].Path < entries[j].Path })
-	return entries, err
-}
-
-// label turns a path under root into "~/.claude/x", "$XDG_STATE_HOME/x" and
-// so on, so reports don't depend on where the root was.
-func label(root, path string) string {
-	rel, err := filepath.Rel(root, path)
-	if err != nil || strings.HasPrefix(rel, "..") {
-		return path
-	}
-	for _, p := range places {
-		if rel == p.rel {
-			return p.label
-		}
-		if strings.HasPrefix(rel, p.rel+"/") {
-			return p.label + "/" + strings.TrimPrefix(rel, p.rel+"/")
-		}
-	}
-	return rel
-}
-
-func checks(runs []Run) []Check {
-	has := func(r Run, prefix string) bool {
-		for _, e := range r.Entries {
-			if e.Path == prefix || strings.HasPrefix(e.Path, prefix+"/") {
-				return true
-			}
-		}
-		return false
-	}
-	def, moved := runs[0], runs[1]
+func checks(r Report, lay *layout) []Check {
 	var cs []Check
 	add := func(claim string, ok bool, note string) { cs = append(cs, Check{claim, ok, note}) }
-	for _, r := range runs {
-		add(fmt.Sprintf("%s: the agent finished", r.Name), r.ExitCode == 0 && !r.TimedOut,
-			fmt.Sprintf("exit status %d", r.ExitCode))
-		called := 0
-		for _, e := range r.Model {
-			if e.Called != "" {
-				called++
+
+	add("a session reached the fake model", r.Invocation != nil, strings.Join(r.Invocation, " "))
+	if len(r.Protocols) > 0 {
+		add("the fake model answers the agent's protocol", answered(r.Protocols), strings.Join(r.Protocols, ", "))
+	}
+	for _, run := range r.Runs {
+		add(fmt.Sprintf("%s: the agent finished", run.Name), run.ExitCode == 0 && !run.TimedOut,
+			fmt.Sprintf("exit status %d", run.ExitCode))
+		for _, t := range run.Transcripts {
+			add(fmt.Sprintf("%s: the transcript the agent reported exists", run.Name), run.has(t), t)
+		}
+	}
+	for _, m := range r.Moves {
+		if len(m.Moved) > 0 {
+			add(fmt.Sprintf("%s moves files out of ~", m.Var), true,
+				fmt.Sprintf("moved %s; stayed %s", joinOr(m.Moved), joinOr(m.Stayed)))
+		}
+	}
+	if lay == nil {
+		return cs
+	}
+	// The layout's claims: each root with a variable moves its default
+	// location, along with the entries whose own default location is
+	// elsewhere in ~ (such as ~/.claude.json)
+	for _, root := range lay.Roots {
+		if root.Env == "" || !strings.HasPrefix(root.Default, "~/") {
+			continue
+		}
+		var m *Move
+		for i := range r.Moves {
+			if r.Moves[i].Var == root.Env {
+				m = &r.Moves[i]
 			}
 		}
-		add(fmt.Sprintf("%s: the agent used the fake model's tools", r.Name), called > 0,
-			fmt.Sprintf("%d tool calls", called))
-	}
-	for _, r := range runs {
-		add(fmt.Sprintf("%s: the agent reported its transcript to a hook", r.Name), len(r.Transcripts) > 0,
-			strings.Join(r.Transcripts, ", "))
-		for _, t := range r.Transcripts {
-			add(fmt.Sprintf("%s: the reported transcript exists", r.Name), has(r, t), t)
+		if m == nil {
+			continue
 		}
-	}
-	if len(moved.Transcripts) > 0 {
-		inside := true
-		for _, t := range moved.Transcripts {
-			inside = inside && strings.HasPrefix(t, "$CLAUDE_CONFIG_DIR/")
-		}
-		add("with CLAUDE_CONFIG_DIR set, the transcript is inside it", inside, "")
-	}
-	add("by default, files go to ~/.claude", has(def, "~/.claude"), "")
-	add("by default, ~/.claude.json is written", has(def, "~/.claude.json"), "")
-	add("with CLAUDE_CONFIG_DIR set, nothing goes to ~/.claude", !has(moved, "~/.claude"), "")
-	add("with CLAUDE_CONFIG_DIR set, ~/.claude.json moves into it",
-		!has(moved, "~/.claude.json") && has(moved, "$CLAUDE_CONFIG_DIR/.claude.json"), "")
-	// What the agent puts in each XDG directory by itself. Not a pass or fail:
-	// a layout records it, and anything new here is worth a look
-	for _, x := range []string{"$XDG_CONFIG_HOME", "$XDG_DATA_HOME", "$XDG_STATE_HOME", "$XDG_CACHE_HOME", "$XDG_RUNTIME_DIR"} {
-		var top []string
-		for _, e := range def.Entries {
-			if rest, ok := strings.CutPrefix(e.Path, x+"/"); ok && !strings.Contains(rest, "/") {
-				top = append(top, rest)
+		top := topOf(root.Default)
+		add(fmt.Sprintf("layout: %s moves %s", root.Env, root.Default), contains(m.Moved, top) && !contains(m.Stayed, top), "")
+		for _, e := range lay.Paths {
+			if e.DefaultPath != "" && strings.HasPrefix(e.DefaultPath, "~/") && contains(r.Runs[0].tops(), topOf(e.DefaultPath)) {
+				add(fmt.Sprintf("layout: %s moves %s too", root.Env, e.DefaultPath), contains(m.Moved, topOf(e.DefaultPath)), "")
 			}
 		}
-		note := "nothing"
-		if len(top) > 0 {
-			note = strings.Join(top, ", ")
-		}
-		add(fmt.Sprintf("by default, what the agent puts in %s", x), true, note)
 	}
 	return cs
 }
 
-// layoutPaths returns the layout's paths under its home root.
-func layoutPaths(path string) ([]string, error) {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var l struct {
-		Paths []struct {
-			Root string `json:"root"`
-			Path string `json:"path"`
-		} `json:"paths"`
-		Untracked []struct {
-			Path string `json:"path"`
-		} `json:"untracked"`
-	}
-	if err := json.Unmarshal(raw, &l); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
-	}
-	var paths []string
-	for _, p := range l.Paths {
-		if p.Root == "home" {
-			paths = append(paths, p.Path)
+// answered reports whether every protocol the agent used is one the fake
+// model answers.
+func answered(ps []string) bool {
+	for _, p := range ps {
+		if p != "anthropic" {
+			return false
 		}
 	}
-	for _, u := range l.Untracked {
-		paths = append(paths, u.Path)
-	}
-	return paths, nil
+	return true
 }
 
-// unknown lists what the default run left under ~/.claude (and
-// ~/.claude.json) that no layout path covers. A layout path covers itself
-// and everything inside it.
-func unknown(r Run, paths []string) []string {
-	covered := func(rel string) bool {
-		for _, p := range paths {
-			if rel == p || strings.HasPrefix(rel, p+"/") {
-				return true
-			}
-		}
-		return false
+func joinOr(xs []string) string {
+	if len(xs) == 0 {
+		return "nothing"
 	}
-	var out []string
-	for _, e := range r.Entries {
-		var rel string
-		switch {
-		case e.Path == "~/.claude.json":
-			rel = ".claude.json"
-		case strings.HasPrefix(e.Path, "~/.claude/"):
-			rel = strings.TrimPrefix(e.Path, "~/.claude/")
-		default:
-			continue
-		}
-		if !covered(rel) {
-			// Report the outermost uncovered folder once, not its contents
-			parent := false
-			for _, o := range out {
-				if strings.HasPrefix(rel, o+"/") {
-					parent = true
-				}
-			}
-			if !parent {
-				out = append(out, rel)
-			}
-		}
-	}
-	return out
+	return strings.Join(xs, ", ")
 }
 
-// hookSettings is a settings file that runs this program as a hook on the
-// events that carry transcript_path.
-func hookSettings(hookLog string) ([]byte, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		return nil, err
-	}
-	command := fmt.Sprintf("'%s' -record-hook '%s'", exe, hookLog)
-	h := []map[string]any{{"type": "command", "command": command}}
-	return json.Marshal(map[string]any{"hooks": map[string]any{
-		"SessionStart": []map[string]any{{"hooks": h}},
-		"PostToolUse":  []map[string]any{{"matcher": "*", "hooks": h}},
-		"Stop":         []map[string]any{{"hooks": h}},
-	}})
-}
-
-// recordHookCall is the hook: it reads the hook's JSON from stdin and
-// appends only the event name and transcript_path. The rest of the payload
-// (tool inputs among it) is never written. It always exits 0, so it can't
-// block the agent.
-func recordHookCall(file string) {
-	var payload struct {
-		Event      string `json:"hook_event_name"`
-		Transcript string `json:"transcript_path"`
-	}
-	if err := json.NewDecoder(os.Stdin).Decode(&payload); err != nil {
-		return
-	}
-	line, _ := json.Marshal(map[string]string{"event": payload.Event, "transcript_path": payload.Transcript})
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-	if err != nil {
-		return
-	}
-	_, _ = f.Write(append(line, '\n'))
-	_ = f.Close()
-}
-
-// hookTranscripts returns the distinct transcript paths the hook recorded,
-// as labels.
-func hookTranscripts(root, hookLog string) []string {
-	raw, err := os.ReadFile(hookLog)
-	if err != nil {
-		return nil
-	}
-	seen := map[string]bool{}
-	var out []string
-	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
-		var rec struct {
-			Transcript string `json:"transcript_path"`
-		}
-		if json.Unmarshal([]byte(line), &rec) != nil || rec.Transcript == "" {
-			continue
-		}
-		l := label(root, rec.Transcript)
-		if !seen[l] {
-			seen[l] = true
-			out = append(out, l)
+func contains(xs []string, x string) bool {
+	for _, y := range xs {
+		if y == x {
+			return true
 		}
 	}
-	return out
+	return false
 }
 
 func printSummary(r Report) {
@@ -492,6 +253,9 @@ func printSummary(r Report) {
 			note = " (" + c.Note + ")"
 		}
 		fmt.Fprintf(os.Stderr, "  %s %s%s\n", mark, c.Claim, note)
+	}
+	for _, x := range r.XDG {
+		fmt.Fprintf(os.Stderr, "  in %s: %s\n", x.Dir, joinOr(x.Entries))
 	}
 	if len(r.Unknown) > 0 {
 		fmt.Fprintf(os.Stderr, "  not in the layout: %s\n", strings.Join(r.Unknown, ", "))

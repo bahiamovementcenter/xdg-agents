@@ -55,11 +55,16 @@ type Server struct {
 // Event records what one request offered and what the script did, without
 // any message content.
 type Event struct {
-	Path    string   `json:"path"`
-	Model   string   `json:"model,omitempty"`
-	Offered []string `json:"offered,omitempty"`
-	Called  string   `json:"called,omitempty"`
-	Purpose string   `json:"purpose,omitempty"`
+	Path string `json:"path"`
+	// The model API the request used, told from its path: anthropic,
+	// openai-chat, openai-responses or gemini. Only anthropic is answered
+	// so far; the others are recorded and refused, so a probe reports which
+	// protocol an agent speaks instead of guessing
+	Protocol string   `json:"protocol,omitempty"`
+	Model    string   `json:"model,omitempty"`
+	Offered  []string `json:"offered,omitempty"`
+	Called   string   `json:"called,omitempty"`
+	Purpose  string   `json:"purpose,omitempty"`
 }
 
 // Log returns what the server has seen so far.
@@ -99,13 +104,32 @@ type block struct {
 	Input json.RawMessage `json:"input,omitempty"`
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// Protocol tells which model API a request path belongs to, or "".
+func Protocol(path string) string {
 	switch {
-	case r.Method == http.MethodPost && r.URL.Path == "/v1/messages":
-		s.messages(w, r)
-	case r.Method == http.MethodPost && r.URL.Path == "/v1/messages/count_tokens":
-		s.record(Event{Path: r.URL.Path})
+	case strings.HasSuffix(path, "/messages"), strings.HasSuffix(path, "/messages/count_tokens"):
+		return "anthropic"
+	case strings.HasSuffix(path, "/chat/completions"):
+		return "openai-chat"
+	case strings.HasSuffix(path, "/responses"):
+		return "openai-responses"
+	case strings.Contains(path, ":generateContent"), strings.Contains(path, ":streamGenerateContent"):
+		return "gemini"
+	}
+	return ""
+}
+
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	proto := Protocol(r.URL.Path)
+	switch {
+	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/messages/count_tokens"):
+		s.record(Event{Path: r.URL.Path, Protocol: proto})
 		writeJSON(w, map[string]int{"input_tokens": 1})
+	case r.Method == http.MethodPost && proto == "anthropic":
+		s.messages(w, r)
+	case proto != "":
+		s.record(Event{Path: r.URL.Path, Protocol: proto})
+		http.Error(w, "fakemodel: the "+proto+" protocol isn't answered yet", http.StatusNotImplemented)
 	default:
 		s.record(Event{Path: r.Method + " " + r.URL.Path})
 		http.NotFound(w, r)
@@ -144,7 +168,7 @@ func (s *Server) messages(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	e := Event{Path: r.URL.Path, Model: req.Model, Offered: offered}
+	e := Event{Path: r.URL.Path, Protocol: "anthropic", Model: req.Model, Offered: offered}
 
 	var reply block
 	stop := "end_turn"

@@ -107,7 +107,7 @@ func TestLogHasNoContent(t *testing.T) {
 	_ = json.Unmarshal(b, &fields)
 	for k := range fields {
 		switch k {
-		case "path", "model", "offered", "called", "purpose":
+		case "path", "protocol", "model", "offered", "called", "purpose":
 		default:
 			t.Errorf("log has field %q", k)
 		}
@@ -165,5 +165,28 @@ func TestToolSearchUnlocksTodo(t *testing.T) {
 	r := decode(t, post(t, s, searchOnly, []string{"Bash", "Write", "ToolSearch"}, false))
 	if r.StopReason != "end_turn" {
 		t.Errorf("a search that found nothing must not repeat: got %+v", r.Content[0])
+	}
+}
+
+func TestProtocolFromPath(t *testing.T) {
+	for path, want := range map[string]string{
+		"/v1/messages":                           "anthropic",
+		"/v1/chat/completions":                   "openai-chat",
+		"/chat/completions":                      "openai-chat",
+		"/v1/responses":                          "openai-responses",
+		"/v1beta/models/g:generateContent":       "gemini",
+		"/v1beta/models/g:streamGenerateContent": "gemini",
+		"/healthz":                               "",
+	} {
+		if got := Protocol(path); got != want {
+			t.Errorf("Protocol(%q) = %q, want %q", path, got, want)
+		}
+	}
+	// Protocols not answered yet are recorded and refused, not guessed
+	s := &Server{}
+	rec := httptest.NewRecorder()
+	s.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader("{}")))
+	if rec.Code != http.StatusNotImplemented || s.Log()[0].Protocol != "openai-chat" {
+		t.Errorf("got %d %+v", rec.Code, s.Log())
 	}
 }
