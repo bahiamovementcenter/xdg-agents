@@ -109,9 +109,8 @@ checked against the settings reference. Both are in
     sessions go to `session-state/<session id>/events.jsonl`.
   - Codex: hooks are configured in `~/.codex/hooks.json`.
   - Claude Code, Codex and Antigravity pass `transcript_path` to every hook.
-    A probe could install a hook in its throwaway config that records that
-    path (only the path), so each agent reports its own transcript
-    location.
+    Done for Claude Code: the probe's hook records it (`docs/probes.md`).
+    Codex and Antigravity can use the same once they have probes.
 - **The settings check relies on SchemaStore**, which isn't Anthropic's
   documentation. If the schema falls behind the settings reference,
   `docsdrift` misses new settings. A check of the reference itself would
