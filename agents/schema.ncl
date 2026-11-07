@@ -117,6 +117,16 @@ in
           | doc "Where the facts in this layout come from",
         roots | { _ : Root },
         paths | Array (std.contract.Sequence [Entry, ConsistentEntry]),
+        untracked
+          | Array { path | String, reason | String }
+          | doc "Paths the agent's documentation lists that this layout leaves out on purpose, so the docs check (tools/docsdrift) doesn't report them"
+          | default
+          = [],
+        untracked_env
+          | Array { name | String, reason | String }
+          | doc "Path-like environment variables the documentation lists that don't relocate the agent's files"
+          | default
+          = [],
       },
       # Every entry's root must be one of the layout's roots
       std.contract.from_predicate (fun l =>
