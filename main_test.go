@@ -110,3 +110,29 @@ func TestUsage(t *testing.T) {
 		t.Errorf("no arguments: exit %d, %q", code, errOut)
 	}
 }
+
+func TestPlanCommand(t *testing.T) {
+	env := fakeHome(t)
+	code, out, errOut := runWith(t, env, "plan")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, errOut)
+	}
+	for _, want := range []string{
+		"Plan for Claude Code (nothing has been changed)",
+		"1. move  ~/.claude → ~/.config/claude",
+		"move  ~/.claude.json → ~/.config/claude/.claude.json",
+		"link  ~/.config/claude/projects → ~/.local/state/claude/projects",
+		`export CLAUDE_CONFIG_DIR="$HOME/.config/claude"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("plan lacks %q:\n%s", want, out)
+		}
+	}
+	// It changes nothing
+	if _, err := os.Stat(filepath.Join(env["HOME"], ".claude")); err != nil {
+		t.Errorf("~/.claude is gone after plan: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(env["HOME"], ".config")); err == nil {
+		t.Error("plan created ~/.config")
+	}
+}

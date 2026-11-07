@@ -3,11 +3,13 @@
 //
 //	xdg-agents list
 //	xdg-agents status [--check] [--json] [--all] [AGENT...]
+//	xdg-agents plan [--json] [AGENT...]
 //
 // AGENT is a layout's id or a prefix of one ("claude" matches claude-code
-// and claude-desktop); with none, every installed agent is shown. status is
-// read-only: it looks at names, types and symlink targets, never at what a
-// file holds. docs/status.md describes the report.
+// and claude-desktop); with none, every installed agent is shown. status and
+// plan are read-only: they look at names, types and symlink targets, never at
+// what a file holds, and change nothing. docs/status.md describes the
+// report, docs/plan.md the plan.
 package main
 
 import (
@@ -21,14 +23,16 @@ import (
 	"strings"
 
 	"github.com/bahiamovementcenter/xdg-agents/internal/layout"
+	"github.com/bahiamovementcenter/xdg-agents/internal/plan"
 	"github.com/bahiamovementcenter/xdg-agents/internal/status"
 )
 
 const usage = `usage:
   xdg-agents list
   xdg-agents status [--check] [--json] [--all] [AGENT...]
+  xdg-agents plan [--json] [AGENT...]
 
-Options for both: --layouts DIR (default: agents)
+Options for all: --layouts DIR (default: agents)
 `
 
 func main() {
@@ -89,6 +93,23 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 		}
 		if *check && r.NeedsAttention() {
 			return 1
+		}
+		return 0
+
+	case "plan":
+		chosen, err := choose(layouts, fs.Args())
+		if err != nil {
+			_, _ = fmt.Fprintln(stderr, "xdg-agents:", err)
+			return 2
+		}
+		r := status.Compute(chosen, getenv, status.Options{GOOS: runtime.GOOS, UID: os.Getuid()})
+		p := plan.Build(r, runtime.GOOS)
+		if *asJSON {
+			b, _ := json.MarshalIndent(p, "", "  ")
+			_, _ = fmt.Fprintln(stdout, string(b))
+		} else if err := plan.Text(stdout, p, getenv("HOME")); err != nil {
+			_, _ = fmt.Fprintln(stderr, "xdg-agents:", err)
+			return 2
 		}
 		return 0
 	}
