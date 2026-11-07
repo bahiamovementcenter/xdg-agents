@@ -14,6 +14,7 @@ let { Layout, .. } = import "schema.ncl" in
     "https://code.claude.com/docs/en/authentication",
     "https://code.claude.com/docs/en/managed-settings",
     "https://code.claude.com/docs/en/env-vars",
+    "https://code.claude.com/docs/en/settings-reference",
     "https://code.claude.com/docs/en/hooks-guide",
   ],
 
@@ -66,7 +67,7 @@ let { Layout, .. } = import "schema.ncl" in
       move = 'with_root,
       sensitive = true,
       holds = "App state, account details, UI toggles, personal MCP servers",
-      note = "Mixes configuration with per-project state and account details, and can't be split. Kept with the configuration because a file can't safely be symlinked (see schema.ncl).",
+      note = "The only place \"global config\" settings (autoConnectIde, diffTool and others) are read from, so it is configuration, but it also holds per-project state and account details and can't be split. Kept with the configuration because a file can't safely be symlinked (see schema.ncl).",
     },
 
     # Data: must survive, worth backing up
@@ -103,7 +104,7 @@ let { Layout, .. } = import "schema.ncl" in
       cleanup = 'swept,
       sensitive = true,
       holds = "Session transcripts per project (plaintext), swept after cleanupPeriodDays (30 by default)",
-      note = "Also holds projects/*/memory (auto memory, kept), which is data but can only move with this folder.",
+      note = "Also holds projects/*/memory (auto memory, kept), which is data but can only move with this folder. With CLAUDE_CONFIG_DIR set, CLAUDE_CODE_PROJECT_DIR_NAME chooses a session's subfolder name here; it doesn't move anything.",
     },
     { root = "home", path = "history.jsonl", kind = 'file, category = 'state, move = 'with_root, cleanup = 'kept, sensitive = true, holds = "Prompt history (up-arrow, Ctrl+R)", note = "A file, so it can't be symlinked out; stays with the configuration." },
     { root = "home", path = "file-history", kind = 'dir, category = 'state, move = 'symlink, cleanup = 'swept, holds = "Pre-edit snapshots for checkpoint restore" },
@@ -138,7 +139,7 @@ let { Layout, .. } = import "schema.ncl" in
 
     # Runtime: only while a session runs
     { root = "home", path = "sessions", kind = 'dir, category = 'runtime, move = 'symlink, cleanup = 'removed_on_exit, holds = "One small file per running session" },
-    { root = "tmp", path = ".", kind = 'dir, category = 'runtime, move = 'env, env = "CLAUDE_CODE_TMPDIR", holds = "Scratchpads, pasted and attached images" },
+    { root = "tmp", path = ".", kind = 'dir, category = 'runtime, move = 'env, env = "CLAUDE_CODE_TMPDIR", holds = "Scratchpads, pasted and attached images (images/ per session)", note = "The variable names the parent: Claude Code appends claude-<uid>/ to it, so CLAUDE_CODE_TMPDIR=$XDG_RUNTIME_DIR gives $XDG_RUNTIME_DIR/claude-<uid>/, not .../claude/. Unset, the parent is os.tmpdir() on Linux ($TMPDIR, else /tmp) and /tmp on macOS." },
 
     # System-wide, set by an administrator: read only, never moved
     { root = "managed", path = "managed-settings.json", kind = 'file, category = 'config, move = 'fixed, holds = "Managed settings" },
