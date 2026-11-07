@@ -16,8 +16,12 @@
 # finds out what they hold: ant-device-registry.json, ant-did,
 # buddy-tokens.json, ca-bundle.pem, ccd-ids.json, chrome-import-sites.json,
 # config.json, cowork-enabled-cli-ops.json, extensions-blocklist.json, fcache,
-# git-shadow, git-worktrees.json, os-entry-points.json,
-# plan-usage-history.json, remote-control-state.json, spaces-present.
+# git-shadow, os-entry-points.json, plan-usage-history.json, spaces-present.
+#
+# ccd-environment-config.json, git-worktrees.json and remote-control-state.json
+# were placed by a probe: saving a local environment named "xdgprobe" for a
+# folder ~/xdgprobe-folder, then listing which files were created or mention
+# the name (names only, never contents).
 #
 # Linux only. On macOS the app uses ~/Library/Application Support/Claude,
 # which is the platform's own convention; whether xdg-agents should touch
@@ -29,6 +33,7 @@ let { Layout, .. } = import "schema.ncl" in
   xdg_name = "Claude",
   sources = [
     "Listing of ~/.config/Claude on Linux, 2026-11-07 (names and types only)",
+    "Saved-environment probe on Linux, 2026-11-07 (which files were created or mention the environment's name)",
     "https://code.claude.com/docs/en/desktop",
     "https://code.claude.com/docs/en/desktop-linux",
   ],
@@ -42,7 +47,18 @@ let { Layout, .. } = import "schema.ncl" in
 
   paths = [
     # Configuration
-    { root = "home", path = "claude_desktop_config.json", kind = 'file, category = 'config, move = 'with_root, documented = false, sensitive = true, holds = "MCP servers for the chat app", note = "Named in the docs, but not its location. Servers' env blocks can hold API keys." },
+    { root = "home", path = "claude_desktop_config.json", kind = 'file, category = 'config, move = 'with_root, documented = false, sensitive = true, holds = "MCP servers for the chat app, and app preferences", note = "Named in the docs, but not its location. Servers' env blocks can hold API keys. Also mentions a saved environment's name or folder (seen in the probe), but what it records there is unconfirmed." },
+    {
+      root = "home",
+      path = "ccd-environment-config.json",
+      kind = 'file,
+      category = 'config,
+      move = 'with_root,
+      documented = false,
+      sensitive = true,
+      holds = "Saved local and SSH environments, with their variables",
+      note = "Created when an environment is first saved; the environment's name isn't in it as plain text, matching the docs' 'stored encrypted on your machine'. Variables can be secrets.",
+    },
     { root = "home", path = "mcp-user-tool-toggles.json", kind = 'file, category = 'config, move = 'with_root, documented = false, holds = "Which MCP tools are turned on" },
     { root = "home", path = "Preferences", kind = 'file, category = 'config, move = 'with_root, documented = false, holds = "Chromium profile preferences" },
 
@@ -58,13 +74,15 @@ let { Layout, .. } = import "schema.ncl" in
     { root = "home", path = "vm_bundles", kind = 'dir, category = 'data, move = 'symlink, documented = false, holds = "The Cowork VM image" },
 
     # State: persists, not worth backing up
-    { root = "home", path = "claude-code-sessions", kind = 'dir, category = 'state, move = 'symlink, documented = false, holds = "Claude Code sessions started from the app, per account", note = "Transcripts themselves are in ~/.claude/projects (see claude-code.ncl)." },
+    { root = "home", path = "claude-code-sessions", kind = 'dir, category = 'state, move = 'symlink, documented = false, holds = "One record per Claude Code session started from the app, per account and organization", note = "Transcripts themselves are in ~/.claude/projects (see claude-code.ncl)." },
     { root = "home", path = "local-agent-mode-sessions", kind = 'dir, category = 'state, move = 'symlink, documented = false, holds = "Local agent (Cowork) sessions, per account" },
     { root = "home", path = "scratch-workspaces", kind = 'dir, category = 'state, move = 'symlink, documented = false, holds = "Per-account scratch workspaces" },
     { root = "home", path = "Session Storage", kind = 'dir, category = 'state, move = 'symlink, documented = false, holds = "Chromium session storage" },
     { root = "home", path = "logs", kind = 'dir, category = 'state, move = 'symlink, documented = false, holds = "App, MCP, SSH, Remote Control and VM logs" },
     { root = "home", path = "Crashpad", kind = 'dir, category = 'state, move = 'symlink, documented = false, holds = "Crash reports" },
     { root = "home", path = "sentry", kind = 'dir, category = 'state, move = 'symlink, documented = false, holds = "Queued error reports" },
+    { root = "home", path = "remote-control-state.json", kind = 'file, category = 'state, move = 'with_root, documented = false, holds = "Folders offered through Remote Control", note = "Machine-specific: the folders are paths on this computer." },
+    { root = "home", path = "git-worktrees.json", kind = 'file, category = 'state, move = 'with_root, documented = false, holds = "Worktrees the app created, per folder" },
     { root = "home", path = "window-state.json", kind = 'file, category = 'state, move = 'with_root, documented = false, holds = "Window size and position" },
     { root = "home", path = "Local State", kind = 'file, category = 'state, move = 'with_root, documented = false, holds = "Chromium browser-wide state" },
     { root = "home", path = "Network Persistent State", kind = 'file, category = 'state, move = 'with_root, documented = false, holds = "Chromium network state" },
