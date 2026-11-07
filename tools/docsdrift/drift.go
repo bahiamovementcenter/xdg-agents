@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -14,6 +15,13 @@ type Layout struct {
 	Paths        []Entry         `json:"paths"`
 	Untracked    []Untracked     `json:"untracked"`
 	UntrackedEnv []UntrackedEnv  `json:"untracked_env"`
+	Settings     []Setting       `json:"settings"`
+	// Same shape as UntrackedEnv: a name and a reason
+	UntrackedSettings []UntrackedEnv `json:"untracked_settings"`
+}
+
+type Setting struct {
+	Name string `json:"name"`
 }
 
 type Root struct {
@@ -44,6 +52,7 @@ const homeRoot = "home"
 const (
 	minDocPaths = 20
 	minEnvVars  = 50
+	minSettings = 50
 )
 
 var (
@@ -51,6 +60,10 @@ var (
 	envRow    = regexp.MustCompile("^\\| `([A-Z][A-Z0-9_]*)` \\|")
 	pathLike  = regexp.MustCompile(`(_DIR|_DIRS|_PATH|_FILE|TMPDIR|_HOME)$`)
 	bulletRow = regexp.MustCompile(`^\s*[*-] `)
+	// camelCase setting names that take a path, such as autoMemoryDirectory.
+	// Matching descriptions instead picks up timeouts and toggles that merely
+	// mention a directory.
+	pathSetting = regexp.MustCompile(`(Dir|Directory|Directories|Path|Paths|File|Folder|Location|Home)$`)
 )
 
 // The sections of the directory page that list what is stored under
@@ -150,6 +163,29 @@ func ExtractDocEnv(md string) ([]string, error) {
 	return sortedKeys(pathy), nil
 }
 
+// ExtractSchemaSettings returns the top-level settings in a JSON Schema for
+// the agent's settings file whose names say they take a path. Nested ones
+// (marketplace sources, sandbox binaries) configure other things, not where
+// the agent stores its own files.
+func ExtractSchemaSettings(schema []byte) ([]string, error) {
+	var s struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(schema, &s); err != nil {
+		return nil, fmt.Errorf("not a JSON Schema: %w", err)
+	}
+	if len(s.Properties) < minSettings {
+		return nil, fmt.Errorf("found only %d settings in the schema (expected at least %d): its format has probably changed, so update ExtractSchemaSettings", len(s.Properties), minSettings)
+	}
+	found := map[string]bool{}
+	for name := range s.Properties {
+		if pathSetting.MatchString(name) {
+			found[name] = true
+		}
+	}
+	return sortedKeys(found), nil
+}
+
 // normalize turns a name from the docs into a path relative to ~/.claude:
 // "~/.claude/backups/" becomes "backups", "~/.claude.json" becomes
 // ".claude.json". It rejects things that aren't paths under ~/.claude.
@@ -183,10 +219,16 @@ type Report struct {
 	NewEnv []string
 	// Variables the layout uses or lists that the docs no longer list
 	GoneEnv []string
+	// Path-like settings in the schema that the layout neither uses nor
+	// lists as untracked
+	NewSettings []string
+	// Settings the layout uses or lists that the schema no longer lists
+	GoneSettings []string
 }
 
 func (r Report) Empty() bool {
-	return len(r.NewPaths)+len(r.GonePaths)+len(r.NewEnv)+len(r.GoneEnv) == 0
+	return len(r.NewPaths)+len(r.GonePaths)+len(r.NewEnv)+len(r.GoneEnv)+
+		len(r.NewSettings)+len(r.GoneSettings) == 0
 }
 
 // Compare checks a layout against the paths and variables from the docs.
@@ -263,6 +305,31 @@ func Compare(l Layout, docPaths, docEnv []string) Report {
 
 	sort.Strings(r.NewPaths)
 	sort.Strings(r.GonePaths)
+	return r
+}
+
+// CompareSettings checks the layout's settings against the path-like
+// settings from the agent's settings schema, and adds the result to r.
+func CompareSettings(r Report, l Layout, schemaSettings []string) Report {
+	known := map[string]bool{}
+	for _, s := range l.Settings {
+		known[s.Name] = true
+	}
+	for _, u := range l.UntrackedSettings {
+		known[u.Name] = true
+	}
+	inSchema := map[string]bool{}
+	for _, s := range schemaSettings {
+		inSchema[s] = true
+		if !known[s] {
+			r.NewSettings = append(r.NewSettings, s)
+		}
+	}
+	for _, s := range sortedKeys(known) {
+		if !inSchema[s] {
+			r.GoneSettings = append(r.GoneSettings, s)
+		}
+	}
 	return r
 }
 

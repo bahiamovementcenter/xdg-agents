@@ -122,21 +122,25 @@ nix flake check             # when flake.nix changes
 
 `.github/workflows/docs-drift.yml` runs `tools/docsdrift` every Monday (and
 on pull requests that touch `agents/`). It fetches Claude Code's
-`claude-directory` and `env-vars` pages and fails when they list a path or
-path-like variable that `agents/claude-code.ncl` doesn't cover, or stop
-listing one it relies on. To run it locally:
+`claude-directory` and `env-vars` pages and its settings schema from
+SchemaStore, and fails when they list a path, path-like variable or
+path-like setting (a top-level setting named `...Directory`, `...Path` and
+so on) that `agents/claude-code.ncl` doesn't cover, or stop listing one it
+relies on. To run it locally:
 
 ```sh
 curl -sSfLO https://code.claude.com/docs/en/claude-directory.md
 curl -sSfLO https://code.claude.com/docs/en/env-vars.md
+curl -sSfLO https://www.schemastore.org/claude-code-settings.json
 nickel export agents/claude-code.ncl > layout.json
 go run ./tools/docsdrift -layout layout.json \
-  -directory-doc claude-directory.md -env-doc env-vars.md
+  -directory-doc claude-directory.md -env-doc env-vars.md \
+  -settings-schema claude-code-settings.json
 ```
 
 When it reports drift, read the docs' own description of each item, then
 add an entry (with its category), mark it `legacy`, or list it under
-`untracked` / `untracked_env` with a reason. Don't guess a category from the
+`untracked` / `untracked_env` / `untracked_settings` with a reason. Don't guess a category from the
 name. Exit status 2 means a page's format changed: fix the extraction in
 `tools/docsdrift/drift.go` rather than lowering its minimums.
 

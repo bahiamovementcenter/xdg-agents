@@ -127,6 +127,23 @@ in
           | doc "Path-like environment variables the documentation lists that don't relocate the agent's files"
           | default
           = [],
+        settings
+          | Array {
+            name | String,
+            moves | String | doc "The path (relative to the root) whose location the setting changes",
+            for_xdg
+              | [| 'yes, 'with_caveat, 'no |]
+              | doc "Whether it can point that path at its XDG target",
+            note | String | optional,
+          }
+          | doc "Settings in the agent's own settings file that move some of its files"
+          | default
+          = [],
+        untracked_settings
+          | Array { name | String, reason | String }
+          | doc "Path-like settings the agent's settings schema lists that don't relocate its files"
+          | default
+          = [],
       },
       # Every entry's root must be one of the layout's roots
       std.contract.from_predicate (fun l =>
