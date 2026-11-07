@@ -81,8 +81,11 @@ func Text(w io.Writer, r Report, home string, plain bool) error {
 			how := "default"
 			if ro.Env != "" {
 				how = ro.Env + " unset"
-				if ro.FromEnv {
+				switch {
+				case ro.FromEnv:
 					how = ro.Env
+				case ro.EnvPending:
+					how = ro.Env + " set, files not moved yet"
 				}
 			}
 			rootDesc = append(rootDesc, fmt.Sprintf("%s (%s)", short(ro.Path), how))

@@ -58,6 +58,10 @@ type RootInfo struct {
 	// Where the root itself belongs: its category's XDG directory and the
 	// agent's subfolder there (empty when that directory is unknown)
 	Target string `json:"target,omitempty"`
+	// The variable is set, but its folder doesn't exist yet and the files
+	// are still at the default location: the state between setting the
+	// variable and running apply
+	EnvPending bool `json:"env_pending,omitempty"`
 }
 
 // Agent is one agent's part of the report.
@@ -99,10 +103,11 @@ func Compute(layouts []layout.Layout, getenv func(string) string, opt Options) R
 
 type resolvedRoot struct {
 	layout.Root
-	name    string
-	path    string
-	fromEnv bool
-	target  string
+	name       string
+	path       string
+	fromEnv    bool
+	envPending bool
+	target     string
 }
 
 func agent(l layout.Layout, dirs xdg.Dirs, getenv func(string) string, opt Options) Agent {
@@ -131,6 +136,10 @@ func agent(l layout.Layout, dirs xdg.Dirs, getenv func(string) string, opt Optio
 		}
 		if v := getenv(root.Env); root.Env != "" && filepath.IsAbs(v) {
 			rr.path, rr.fromEnv = filepath.Clean(v), true
+			// Set ahead of the move: the files are still at the default
+			if !exists(rr.path) && exists(expand(def)) {
+				rr.path, rr.fromEnv, rr.envPending = expand(def), false, true
+			}
 		} else {
 			rr.path = expand(def)
 		}
@@ -144,7 +153,7 @@ func agent(l layout.Layout, dirs xdg.Dirs, getenv func(string) string, opt Optio
 		if exists && (rr.fromEnv || strings.HasPrefix(def, "~/")) {
 			a.Installed = true
 		}
-		a.Roots = append(a.Roots, RootInfo{Name: n, Path: rr.path, Env: root.Env, FromEnv: rr.fromEnv, Exists: exists, Category: string(root.Category), Target: rr.target})
+		a.Roots = append(a.Roots, RootInfo{Name: n, Path: rr.path, Env: root.Env, FromEnv: rr.fromEnv, Exists: exists, Category: string(root.Category), Target: rr.target, EnvPending: rr.envPending})
 	}
 
 	settingFor := map[string]layout.Setting{}

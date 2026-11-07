@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bahiamovementcenter/xdg-agents/internal/apply"
 )
 
 // fakeHome makes a temporary HOME holding Claude Code's default files.
@@ -29,7 +31,7 @@ func fakeHome(t *testing.T) map[string]string {
 func runWith(t *testing.T, env map[string]string, args ...string) (int, string, string) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	code := run(args, &out, &errOut, func(k string) string { return env[k] })
+	code := run(args, strings.NewReader(""), &out, &errOut, func(k string) string { return env[k] })
 	return code, out.String(), errOut.String()
 }
 
@@ -134,5 +136,57 @@ func TestPlanCommand(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(env["HOME"], ".config")); err == nil {
 		t.Error("plan created ~/.config")
+	}
+}
+
+// apply on a fake home: refuses until the variables are set, then moves
+// after confirmation, and undo puts everything back
+func TestApplyAndUndoCommands(t *testing.T) {
+	running = func([]string) []string { return nil }
+	defer func() { running = apply.Running }()
+	env := fakeHome(t)
+	home := env["HOME"]
+
+	code, _, errOut := runWith(t, env, "apply", "--yes")
+	if code != 1 || !strings.Contains(errOut, "CLAUDE_CONFIG_DIR must already be set") {
+		t.Fatalf("apply without the variables: exit %d, %s", code, errOut)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".claude")); err != nil {
+		t.Fatal("apply changed files although it refused")
+	}
+
+	env["CLAUDE_CONFIG_DIR"] = filepath.Join(home, ".config/claude")
+	// Without --yes, anything but "yes" changes nothing
+	var out, errBuf bytes.Buffer
+	code = run([]string{"apply"}, strings.NewReader("no\n"), &out, &errBuf, func(k string) string { return env[k] })
+	if code != 1 || !strings.Contains(out.String(), "Nothing was changed.") {
+		t.Fatalf("apply answered no: exit %d\n%s%s", code, out.String(), errBuf.String())
+	}
+	out.Reset()
+	code = run([]string{"apply"}, strings.NewReader("yes\n"), &out, &errBuf, func(k string) string { return env[k] })
+	if code != 0 || !strings.Contains(out.String(), "Done.") {
+		t.Fatalf("apply answered yes: exit %d\n%s%s", code, out.String(), errBuf.String())
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config/claude/settings.json")); err != nil {
+		t.Errorf("settings.json didn't move: %v", err)
+	}
+
+	code, outU, errU := runWith(t, env, "undo")
+	if code != 0 || !strings.Contains(outU, "Undone:") {
+		t.Fatalf("undo: exit %d %s %s", code, outU, errU)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".claude/settings.json")); err != nil {
+		t.Errorf("undo didn't put settings.json back: %v", err)
+	}
+}
+
+func TestApplyRefusesWhileAgentRuns(t *testing.T) {
+	running = func([]string) []string { return []string{"claude"} }
+	defer func() { running = apply.Running }()
+	env := fakeHome(t)
+	env["CLAUDE_CONFIG_DIR"] = filepath.Join(env["HOME"], ".config/claude")
+	code, _, errOut := runWith(t, env, "apply", "--yes")
+	if code != 1 || !strings.Contains(errOut, "Claude Code is running") {
+		t.Errorf("exit %d, %s", code, errOut)
 	}
 }
