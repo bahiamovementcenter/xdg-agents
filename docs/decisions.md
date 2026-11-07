@@ -12,7 +12,9 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 
 ## Open
 
-None right now.
+| # | Question | Options | Recommended |
+| :-- | :-- | :-- | :-- |
+| 27 | The first "done" check in `AGENTS.md` (`./xdg-agents status` on Claude Code) isn't built: nothing reads the real machine yet. The probe and docs checks make the layout data trustworthy but don't move that check. Who builds `status` now, as `docs/status.md` describes (decisions 10 to 17)? | **A** Claude, in the next PR · **B** the owner (who planned the unclassified reporting) · **C** something else first | A |
 
 ## Decided
 
