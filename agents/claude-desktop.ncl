@@ -19,7 +19,7 @@
 # git-shadow, os-entry-points.json, plan-usage-history.json, spaces-present.
 #
 # ccd-environment-config.json, git-worktrees.json and remote-control-state.json
-# were placed by a probe: saving a local environment named "xdgprobe" for a
+# were placed by a probe (followed by key names only, via jq paths): saving a local environment named "xdgprobe" for a
 # folder ~/xdgprobe-folder, then listing which files were created or mention
 # the name (names only, never contents).
 #
@@ -47,7 +47,7 @@ let { Layout, .. } = import "schema.ncl" in
 
   paths = [
     # Configuration
-    { root = "home", path = "claude_desktop_config.json", kind = 'file, category = 'config, move = 'with_root, documented = false, sensitive = true, holds = "MCP servers for the chat app, and app preferences", note = "Named in the docs, but not its location. Servers' env blocks can hold API keys. Also mentions a saved environment's name or folder (seen in the probe), but what it records there is unconfirmed." },
+    { root = "home", path = "claude_desktop_config.json", kind = 'file, category = 'config, move = 'with_root, documented = false, sensitive = true, holds = "MCP servers for the chat app, and app preferences", note = "Named in the docs, but not its location. Top-level keys: mcpServers (env blocks can hold API keys), coworkUserFilesPath, and preferences: UI state, per-account toggles, Cowork trusted folders and Remote Control pinned folders. Mixes configuration with UI state; kept as configuration." },
     {
       root = "home",
       path = "ccd-environment-config.json",
@@ -56,15 +56,15 @@ let { Layout, .. } = import "schema.ncl" in
       move = 'with_root,
       documented = false,
       sensitive = true,
-      holds = "Saved local and SSH environments, with their variables",
-      note = "Created when an environment is first saved; the environment's name isn't in it as plain text, matching the docs' 'stored encrypted on your machine'. Variables can be secrets.",
+      holds = "Environment variables for local sessions, encrypted",
+      note = "Created when an environment was first saved. A JSON object with one key, envVars, whose value is a single encrypted string: a variable saved in the probe was not in the file as plain text, matching the docs' 'stored encrypted on your machine'. The environments themselves (names, folders) aren't here; see Local Storage.",
     },
     { root = "home", path = "mcp-user-tool-toggles.json", kind = 'file, category = 'config, move = 'with_root, documented = false, holds = "Which MCP tools are turned on" },
     { root = "home", path = "Preferences", kind = 'file, category = 'config, move = 'with_root, documented = false, holds = "Chromium profile preferences" },
 
     # Data: must survive
     { root = "home", path = "Cookies", kind = 'file, category = 'data, move = 'with_root, documented = false, sensitive = true, holds = "Chromium cookies, including the claude.ai sign-in", note = "A file, so it stays put; its -journal file goes with it." },
-    { root = "home", path = "Local Storage", kind = 'dir, category = 'data, move = 'symlink, documented = false, sensitive = true, holds = "Chromium local storage for claude.ai" },
+    { root = "home", path = "Local Storage", kind = 'dir, category = 'data, move = 'symlink, documented = false, sensitive = true, holds = "Chromium local storage for claude.ai", note = "Most likely where saved local and SSH environments (names and folders) are kept: the only store besides logs and session records where the probe's environment name appeared." },
     { root = "home", path = "IndexedDB", kind = 'dir, category = 'data, move = 'symlink, documented = false, sensitive = true, holds = "Chromium IndexedDB for claude.ai" },
     { root = "home", path = "WebStorage", kind = 'dir, category = 'data, move = 'symlink, documented = false, holds = "Chromium storage quota database" },
     { root = "home", path = "blob_storage", kind = 'dir, category = 'data, move = 'symlink, documented = false, holds = "Chromium blob storage" },
