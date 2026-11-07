@@ -73,9 +73,9 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
   written from a listing of a real `~/.config/Claude` (the folder isn't
   documented). Its unknown files are left out on purpose, to be reported as
   unclassified.
-- `main.go`, `config.ncl` and `schema.ncl` (at the top level) are still the
-  `go-nickel` template's greeting example and are to be replaced by code
-  that reads `agents/*.ncl`.
+- `main.go` loads every layout in `agents/` through go-nickel (which runs
+  their contracts) and prints a line per layout. `status`, `plan` and
+  `apply` are still to be written on top of it.
 
 ### First "done" check
 
@@ -109,7 +109,7 @@ From the development shell:
 
 ```sh
 go build -o xdg-agents .    # build
-./xdg-agents                # run (reads config.ncl)
+./xdg-agents                # run (loads agents/*.ncl)
 go test ./...               # must pass before a change is done
 go vet ./...                # must pass
 golangci-lint run           # must pass
