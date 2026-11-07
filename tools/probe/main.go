@@ -10,6 +10,11 @@
 //
 //	go run ./tools/probe -layout layout.json -out probe.json
 //
+// Each run also gives the agent a hook, through --settings from outside its
+// own folders, that records the transcript_path the agent passes to hooks:
+// the agent itself says where its transcript is. The hook is this program
+// in -record-hook mode, which writes down only the event name and that path.
+//
 // Only Claude Code is supported so far.
 package main
 
@@ -59,7 +64,9 @@ type Run struct {
 	ExitCode int               `json:"exit_code"`
 	TimedOut bool              `json:"timed_out,omitempty"`
 	Model    []fakemodel.Event `json:"model_requests"`
-	Entries  []Entry           `json:"entries"`
+	// The transcript paths the agent passed to its hooks, as labels
+	Transcripts []string `json:"transcripts"`
+	Entries     []Entry  `json:"entries"`
 }
 
 // Report is the probe's output.
@@ -84,7 +91,12 @@ func main() {
 	out := flag.String("out", "", "write the report as JSON here (default: stdout)")
 	timeout := flag.Duration("timeout", 2*time.Minute, "how long one run may take")
 	keep := flag.Bool("keep", false, "keep the throwaway roots, and print where they are")
+	recordHook := flag.String("record-hook", "", "internal: run as the agent's hook, appending to this file")
 	flag.Parse()
+	if *recordHook != "" {
+		recordHookCall(*recordHook)
+		return
+	}
 	if *agent != "claude" {
 		fail(fmt.Errorf("only claude is supported so far, not %q", *agent))
 	}
@@ -176,7 +188,23 @@ func runOnce(bin, name string, relocate bool, timeout time.Duration) (Run, strin
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+	// The probe's own files live in root/probe, which list() skips
+	own := filepath.Join(root, "probe")
+	if err := os.MkdirAll(own, 0o700); err != nil {
+		return Run{}, root, err
+	}
+	hookLog := filepath.Join(own, "hooks.jsonl")
+	settings, err := hookSettings(hookLog)
+	if err != nil {
+		return Run{}, root, err
+	}
+	settingsFile := filepath.Join(own, "settings.json")
+	if err := os.WriteFile(settingsFile, settings, 0o600); err != nil {
+		return Run{}, root, err
+	}
+
 	cmd := exec.CommandContext(ctx, bin, "-p", "Run the probe.",
+		"--settings", settingsFile,
 		"--allowedTools", "Bash Write ToolSearch TodoWrite TaskCreate TaskUpdate")
 	cmd.Dir = project
 	cmd.Env = []string{"PATH=" + os.Getenv("PATH")}
@@ -201,6 +229,7 @@ func runOnce(bin, name string, relocate bool, timeout time.Duration) (Run, strin
 		return run, root, err
 	}
 	run.Model = model.Log()
+	run.Transcripts = hookTranscripts(root, hookLog)
 	run.Entries, err = list(root)
 	return run, root, err
 }
@@ -215,6 +244,9 @@ func list(root string) ([]Entry, error) {
 		rel, _ := filepath.Rel(root, path)
 		if rel == "." {
 			return nil
+		}
+		if rel == "probe" {
+			return fs.SkipDir // the probe's own settings and hook log
 		}
 		for _, p := range places {
 			if rel == p.rel || rel == "xdg" { // the places themselves
@@ -279,6 +311,20 @@ func checks(runs []Run) []Check {
 		}
 		add(fmt.Sprintf("%s: the agent used the fake model's tools", r.Name), called > 0,
 			fmt.Sprintf("%d tool calls", called))
+	}
+	for _, r := range runs {
+		add(fmt.Sprintf("%s: the agent reported its transcript to a hook", r.Name), len(r.Transcripts) > 0,
+			strings.Join(r.Transcripts, ", "))
+		for _, t := range r.Transcripts {
+			add(fmt.Sprintf("%s: the reported transcript exists", r.Name), has(r, t), t)
+		}
+	}
+	if len(moved.Transcripts) > 0 {
+		inside := true
+		for _, t := range moved.Transcripts {
+			inside = inside && strings.HasPrefix(t, "$CLAUDE_CONFIG_DIR/")
+		}
+		add("with CLAUDE_CONFIG_DIR set, the transcript is inside it", inside, "")
 	}
 	add("by default, files go to ~/.claude", has(def, "~/.claude"), "")
 	add("by default, ~/.claude.json is written", has(def, "~/.claude.json"), "")
@@ -367,6 +413,68 @@ func unknown(r Run, paths []string) []string {
 			if !parent {
 				out = append(out, rel)
 			}
+		}
+	}
+	return out
+}
+
+// hookSettings is a settings file that runs this program as a hook on the
+// events that carry transcript_path.
+func hookSettings(hookLog string) ([]byte, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	command := fmt.Sprintf("'%s' -record-hook '%s'", exe, hookLog)
+	h := []map[string]any{{"type": "command", "command": command}}
+	return json.Marshal(map[string]any{"hooks": map[string]any{
+		"SessionStart": []map[string]any{{"hooks": h}},
+		"PostToolUse":  []map[string]any{{"matcher": "*", "hooks": h}},
+		"Stop":         []map[string]any{{"hooks": h}},
+	}})
+}
+
+// recordHookCall is the hook: it reads the hook's JSON from stdin and
+// appends only the event name and transcript_path. The rest of the payload
+// (tool inputs among it) is never written. It always exits 0, so it can't
+// block the agent.
+func recordHookCall(file string) {
+	var payload struct {
+		Event      string `json:"hook_event_name"`
+		Transcript string `json:"transcript_path"`
+	}
+	if err := json.NewDecoder(os.Stdin).Decode(&payload); err != nil {
+		return
+	}
+	line, _ := json.Marshal(map[string]string{"event": payload.Event, "transcript_path": payload.Transcript})
+	f, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return
+	}
+	_, _ = f.Write(append(line, '\n'))
+	_ = f.Close()
+}
+
+// hookTranscripts returns the distinct transcript paths the hook recorded,
+// as labels.
+func hookTranscripts(root, hookLog string) []string {
+	raw, err := os.ReadFile(hookLog)
+	if err != nil {
+		return nil
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+		var rec struct {
+			Transcript string `json:"transcript_path"`
+		}
+		if json.Unmarshal([]byte(line), &rec) != nil || rec.Transcript == "" {
+			continue
+		}
+		l := label(root, rec.Transcript)
+		if !seen[l] {
+			seen[l] = true
+			out = append(out, l)
 		}
 	}
 	return out

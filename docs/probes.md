@@ -27,6 +27,14 @@ and 25 in `docs/decisions.md`).
 
   It then lists names, types and symlink targets, never contents, and
   checks the layout's claims against them.
+- **A hook reports the transcript.** Each run passes the agent a settings
+  file, with `--settings`, from outside the agent's own folders, so nothing
+  is seeded into them. It sets up a hook on `SessionStart`, `PostToolUse`
+  and `Stop` that runs the probe itself in `-record-hook` mode. That mode
+  writes down only the event name and the `transcript_path` the agent
+  passes, never the rest of the payload, and it always exits 0. So the
+  agent itself says where its transcript is, and the probe checks that the
+  file exists and that the layout covers it.
 
 ## Running it
 
@@ -54,6 +62,7 @@ Claude Code 2.1.319, 2026-11-07, in a Claude Code cloud session.
 | With `CLAUDE_CONFIG_DIR` set, nothing goes to `~/.claude` | ok |
 | With `CLAUDE_CONFIG_DIR` set, `.claude.json` moves into it | ok, as the docs say |
 | Anything in `~/.claude` the layout doesn't cover | none |
+| Where the agent says its transcript is (hook `transcript_path`) | `~/.claude/projects/<project>/<session>.jsonl`; with `CLAUDE_CONFIG_DIR` set, the same path inside it. The file exists both times. |
 | In `$XDG_CONFIG_HOME`, `$XDG_DATA_HOME`, `$XDG_STATE_HOME`, `$XDG_CACHE_HOME` | nothing |
 | In `$XDG_RUNTIME_DIR` | **`cc-socks`**: undocumented, not in the layout |
 
