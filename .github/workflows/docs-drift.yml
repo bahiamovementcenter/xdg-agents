@@ -1,0 +1,54 @@
+name: Docs drift
+
+# Compares agents/claude-code.ncl with Claude Code's documentation. Fails
+# when the docs list a path or path-like variable the layout doesn't cover,
+# or stop listing one it relies on. It only detects: what a new path is gets
+# decided in a reviewed change to the layout.
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # Mondays, 05:17 UTC
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "agents/**"
+      - "tools/docsdrift/**"
+      - ".github/workflows/docs-drift.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  claude-code:
+    name: Claude Code layout matches its docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+
+      - name: Fetch the docs
+        run: |
+          mkdir -p "$RUNNER_TEMP/docs"
+          for page in claude-directory env-vars; do
+            curl --fail --silent --show-error --location --retry 3 \
+              -o "$RUNNER_TEMP/docs/$page.md" \
+              "https://code.claude.com/docs/en/$page.md"
+          done
+
+      - name: Export the layout
+        run: nix develop --command nickel export agents/claude-code.ncl > "$RUNNER_TEMP/layout.json"
+
+      # Built first so the check's exit status (1 drift, 2 can't check)
+      # reaches the step unchanged
+      - name: Compare
+        run: |
+          nix develop --command go build -o "$RUNNER_TEMP/docsdrift" ./tools/docsdrift
+          nix develop --command "$RUNNER_TEMP/docsdrift" \
+            -layout "$RUNNER_TEMP/layout.json" \
+            -directory-doc "$RUNNER_TEMP/docs/claude-directory.md" \
+            -env-doc "$RUNNER_TEMP/docs/env-vars.md"

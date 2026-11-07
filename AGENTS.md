@@ -111,6 +111,28 @@ nickel export agents/claude-code.ncl     # also runs the contracts
 nix flake check             # when flake.nix changes
 ```
 
+### Keeping layouts current
+
+`.github/workflows/docs-drift.yml` runs `tools/docsdrift` every Monday (and
+on pull requests that touch `agents/`). It fetches Claude Code's
+`claude-directory` and `env-vars` pages and fails when they list a path or
+path-like variable that `agents/claude-code.ncl` doesn't cover, or stop
+listing one it relies on. To run it locally:
+
+```sh
+curl -sSfLO https://code.claude.com/docs/en/claude-directory.md
+curl -sSfLO https://code.claude.com/docs/en/env-vars.md
+nickel export agents/claude-code.ncl > layout.json
+go run ./tools/docsdrift -layout layout.json \
+  -directory-doc claude-directory.md -env-doc env-vars.md
+```
+
+When it reports drift, read the docs' own description of each item, then
+add an entry (with its category), mark it `legacy`, or list it under
+`untracked` / `untracked_env` with a reason. Don't guess a category from the
+name. Exit status 2 means a page's format changed: fix the extraction in
+`tools/docsdrift/drift.go` rather than lowering its minimums.
+
 ## Code style
 
 - `gofmt` (or `goimports`) on Go, `nickel format` on Nickel, `nix fmt` on Nix.

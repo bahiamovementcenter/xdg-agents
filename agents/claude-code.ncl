@@ -146,4 +146,16 @@ let { Layout, .. } = import "schema.ncl" in
     { root = "managed", path = "managed-settings.d", kind = 'dir, category = 'config, move = 'fixed, holds = "Managed settings drop-ins" },
     { root = "managed", path = "managed-mcp.json", kind = 'file, category = 'config, move = 'fixed, holds = "Managed MCP servers" },
   ],
+
+  untracked_env = [
+    { name = "CLAUDE_CODE_DEBUG_LOGS_DIR", reason = "Sets the debug log file, not a folder; noted on debug" },
+    { name = "CLAUDE_JOB_DIR", reason = "Set by Claude Code for each background session, pointing into jobs/" },
+    { name = "CLAUDE_CODE_PLUGIN_DIRS", reason = "Extra plugin folders to load, like --plugin-dir; moves nothing" },
+    { name = "CLAUDE_CODE_PLUGIN_SEED_DIR", reason = "Read-only plugin folders bundled into images; moves nothing" },
+    { name = "CLAUDE_ENV_FILE", reason = "A script run before each Bash command; not storage" },
+    { name = "CLAUDE_CLIENT_PRESENCE_FILE", reason = "A file another tool creates; not storage" },
+    { name = "CLAUDE_CODE_GIT_BASH_PATH", reason = "Windows: where Git Bash is; not storage" },
+    { name = "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR", reason = "A Bash tool option; not a path" },
+    { name = "CLAUDE_CODE_DISABLE_BG_STABLE_PATH", reason = "macOS native installer option; the app it names is already in ~/.local/share/claude" },
+  ],
 } | Layout
