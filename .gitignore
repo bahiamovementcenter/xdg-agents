@@ -1,2 +1,2 @@
-# The example binary (go build)
-/go-nickel-example
+# The app binary (go build -o xdg-agents .)
+/xdg-agents

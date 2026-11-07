@@ -1,4 +1,4 @@
-module example.com/go-nickel-example
+module github.com/bahiamovementcenter/xdg-agents-
 
 go 1.25.2
 
