@@ -66,6 +66,10 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
 ### Current state
 
 - `agents/claude-code.ncl`: Claude Code's layout, written from its docs.
+- `agents/claude-desktop.ncl`: the Claude desktop app's layout on Linux,
+  written from a listing of a real `~/.config/Claude` (the folder isn't
+  documented). Its unknown files are left out on purpose, to be reported as
+  unclassified.
 - `main.go`, `config.ncl` and `schema.ncl` (at the top level) are still the
   `go-nickel` template's greeting example and are to be replaced by code
   that reads `agents/*.ncl`.
