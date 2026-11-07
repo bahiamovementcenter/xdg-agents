@@ -12,7 +12,9 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 
 ## Open
 
-None right now.
+| # | Question | Options | Recommended |
+| :-- | :-- | :-- | :-- |
+| 24 | Probe agents automatically using [llm-agents.nix](https://github.com/numtide/llm-agents.nix) as a flake input: a Nix build runs each agent offline with a throwaway `HOME` and separate XDG folders, records what appears (names and types only), and reruns with the layout's variables to check they move what we claim. Classifying stays a person's job. | **A** prototype one probe, for Claude Code, and compare it with `agents/claude-code.ncl` · **B** probes for every packaged agent, plus draft layouts (no categories) for agents without one · **C** don't | A |
 
 ## Decided
 
