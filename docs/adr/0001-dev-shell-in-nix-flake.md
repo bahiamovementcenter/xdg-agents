@@ -1,6 +1,6 @@
 # ADR-0001: Define the development shell in a Nix flake, not Organist
 
-**Status:** Proposed
+**Status:** Accepted (decision 3 in `docs/decisions.md`, 2026-11-07)
 **Date:** 2026-11-07
 **Deciders:** Repository owner
 

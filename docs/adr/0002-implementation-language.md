@@ -1,6 +1,6 @@
 # ADR-0002: Keep Go and go-nickel for now; don't wait for gleam-nickel-embedded
 
-**Status:** Proposed
+**Status:** Accepted (decision 4 in `docs/decisions.md`, 2026-11-07)
 **Date:** 2026-11-07
 **Deciders:** Repository owner
 
@@ -124,7 +124,7 @@ agent's layout, carries over unchanged if this is reversed.
 2. [ ] Keep the Nickel layouts free of anything Go-specific, so a move to
    Gleam stays cheap.
 3. [ ] Decide where agent layouts live (this repository or a separate one);
-   see ADR-0003 when written.
+   decided in ADR-0003.
 
 [go-nickel]: https://github.com/nickel-lang/go-nickel
 [bindings]: https://github.com/bahiamovementcenter/gleam-nickel-bindings
