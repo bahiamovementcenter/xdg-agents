@@ -7,11 +7,9 @@ import (
 	"strings"
 )
 
-// Running looks through /proc for processes whose program is one of names,
-// by the process name or the first two words of its command line (an agent
-// run by an interpreter, such as `node …/claude`, shows as its second word).
-// It never counts the current process. Where there's no /proc (macOS), it
-// finds nothing; apply only plans and runs on Linux anyway.
+// Running looks through /proc for processes running one of names. It never
+// counts the current process. Where there's no /proc (macOS), it finds
+// nothing; apply only plans and runs on Linux anyway.
 func Running(names []string) []string {
 	want := map[string]bool{}
 	for _, n := range names {
@@ -31,22 +29,43 @@ func Running(names []string) []string {
 		if err != nil || pid == self {
 			continue
 		}
-		var candidates []string
-		if comm, err := os.ReadFile(filepath.Join("/proc", e.Name(), "comm")); err == nil {
-			candidates = append(candidates, strings.TrimSpace(string(comm)))
-		}
-		if cmd, err := os.ReadFile(filepath.Join("/proc", e.Name(), "cmdline")); err == nil {
-			args := strings.Split(string(cmd), "\x00")
-			for i := 0; i < len(args) && i < 2; i++ {
-				candidates = append(candidates, filepath.Base(args[i]))
-			}
-		}
-		for _, c := range candidates {
-			if want[c] && !seen[c] {
-				seen[c] = true
-				found = append(found, c)
-			}
+		comm, _ := os.ReadFile(filepath.Join("/proc", e.Name(), "comm"))
+		cmd, _ := os.ReadFile(filepath.Join("/proc", e.Name(), "cmdline"))
+		if n := matchProcess(strings.TrimSpace(string(comm)), strings.Split(string(cmd), "\x00"), want); n != "" && !seen[n] {
+			seen[n] = true
+			found = append(found, n)
 		}
 	}
 	return found
+}
+
+// Programs that run an agent as a script: the script, not the program,
+// names the agent.
+var interpreters = map[string]bool{"node": true, "nodejs": true, "bun": true, "deno": true, "python": true, "python3": true}
+
+// matchProcess returns which wanted name a process is running, or "". It
+// looks at the process name, then at every folder and file name in the
+// program's path, and, when the program is an interpreter, in the script's
+// path: an agent run that way shows only there, often only as a folder, as
+// in `node …/lib/openclaw/dist/index.js gateway`. Any other argument, such
+// as a file an editor has open, is ignored.
+func matchProcess(comm string, args []string, want map[string]bool) string {
+	if want[comm] {
+		return comm
+	}
+	if len(args) == 0 {
+		return ""
+	}
+	paths := []string{args[0]}
+	if len(args) > 1 && (interpreters[comm] || interpreters[filepath.Base(args[0])]) {
+		paths = append(paths, args[1])
+	}
+	for _, p := range paths {
+		for _, part := range strings.Split(p, "/") {
+			if want[part] {
+				return part
+			}
+		}
+	}
+	return ""
 }

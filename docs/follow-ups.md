@@ -32,7 +32,6 @@ From the docs only: nothing seen on disk yet.
 
 | Path | Seen | What we know | To settle it |
 | :-- | :-- | :-- | :-- |
-| The running check | docs | `apply` looks for a process named `openclaw`. Run from npm, the gateway may show as `node …/openclaw.mjs` or similar, which wouldn't match | See what the gateway's process looks like, then let a layout name its process names |
 | `~/.openclaw-<profile>` | docs | `OPENCLAW_PROFILE` gives each profile its own folder, laid out like `~/.openclaw` | Let a root's default hold a wildcard, or add profiles by hand |
 | Retired files (`identity/`, `delivery-queue/`, `session-delivery-queue/`, `plugins/installs.json`, `tasks/`, `flows/`, `plugin-state/`, `agent/`, `agent.legacy-*`) | docs (doctor) | Imported or kept by `openclaw doctor`; the docs say not to delete them first | Left unclassified on purpose, so they aren't shown as safe to delete. Add them if a "retired, keep" state is wanted |
 | Plugin packages | docs | "Installed plugins (plus their node_modules/)", not in backups, reinstalled after restore; folder not named | Probe, then likely cache |
