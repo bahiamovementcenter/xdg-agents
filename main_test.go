@@ -190,3 +190,43 @@ func TestApplyRefusesWhileAgentRuns(t *testing.T) {
 		t.Errorf("exit %d, %s", code, errOut)
 	}
 }
+
+// status ends by naming the next command: plan while files are to move,
+// undo once an apply has been made
+func TestStatusNextSteps(t *testing.T) {
+	running = func([]string) []string { return nil }
+	defer func() { running = apply.Running }()
+	env := fakeHome(t)
+
+	_, out, _ := runWith(t, env, "status", "claude-code")
+	if !strings.Contains(out, "`xdg-agents plan claude-code` shows the") {
+		t.Errorf("status with files to move doesn't suggest plan:\n%s", out)
+	}
+	if strings.Contains(out, "xdg-agents undo") {
+		t.Errorf("status suggests undo before any apply:\n%s", out)
+	}
+	_, out, _ = runWith(t, env, "status", "--json")
+	if strings.Contains(out, "Next:") {
+		t.Error("--json output has the Next lines")
+	}
+
+	env["CLAUDE_CONFIG_DIR"] = filepath.Join(env["HOME"], ".config/claude")
+	if code, _, errOut := runWith(t, env, "apply", "--yes"); code != 0 {
+		t.Fatalf("apply: exit %d, %s", code, errOut)
+	}
+	_, out, _ = runWith(t, env, "status")
+	if strings.Contains(out, "xdg-agents plan") {
+		t.Errorf("status after apply still suggests plan:\n%s", out)
+	}
+	if !strings.Contains(out, "The last apply is recorded in ~/.local/state/xdg-agents/journal-") || !strings.Contains(out, "`xdg-agents undo` reverses it") {
+		t.Errorf("status after apply doesn't point at undo:\n%s", out)
+	}
+
+	if code, _, errOut := runWith(t, env, "undo"); code != 0 {
+		t.Fatalf("undo: exit %d, %s", code, errOut)
+	}
+	_, out, _ = runWith(t, env, "status")
+	if strings.Contains(out, "xdg-agents undo") || !strings.Contains(out, "xdg-agents plan") {
+		t.Errorf("status after undo:\n%s", out)
+	}
+}

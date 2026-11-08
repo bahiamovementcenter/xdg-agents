@@ -108,9 +108,14 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer, getenv func(s
 		if *asJSON {
 			b, _ := json.MarshalIndent(r, "", "  ")
 			_, _ = fmt.Fprintln(stdout, string(b))
-		} else if err := status.Text(stdout, r, getenv("HOME"), plain(stdout, getenv)); err != nil {
-			_, _ = fmt.Fprintln(stderr, "xdg-agents:", err)
-			return 2
+		} else {
+			if err := status.Text(stdout, r, getenv("HOME"), plain(stdout, getenv)); err != nil {
+				_, _ = fmt.Fprintln(stderr, "xdg-agents:", err)
+				return 2
+			}
+			if lines := nextSteps(r, fs.Args(), getenv("HOME")); len(lines) > 0 {
+				_, _ = fmt.Fprintf(stdout, "\nNext:\n  %s\n", strings.Join(lines, "\n  "))
+			}
 		}
 		if *check && r.NeedsAttention() {
 			return 1
@@ -191,6 +196,29 @@ func undo(journal string, stdout, stderr io.Writer, getenv func(string) string) 
 	}
 	_, _ = fmt.Fprintf(stdout, "Undone: %s\n", journal)
 	return 0
+}
+
+// nextSteps says what to run after status: plan, when it has steps to show,
+// and undo, when an apply hasn't been undone. Plan decides what can move,
+// so status never suggests a plan that would be empty or refused.
+func nextSteps(r status.Report, agents []string, home string) []string {
+	var lines []string
+	p := plan.Build(r, runtime.GOOS)
+	steps := 0
+	for _, a := range p.Agents {
+		steps += len(a.Steps)
+	}
+	if p.Refused == "" && steps > 0 {
+		cmd := strings.TrimSpace("xdg-agents plan " + strings.Join(agents, " "))
+		lines = append(lines, fmt.Sprintf("`%s` shows the %d steps that would put these files in place.", cmd, steps))
+	}
+	if j, err := apply.Latest(stateDir(r)); err == nil {
+		if home != "" && strings.HasPrefix(j, home+"/") {
+			j = "~" + strings.TrimPrefix(j, home)
+		}
+		lines = append(lines, fmt.Sprintf("The last apply is recorded in %s: `xdg-agents undo` reverses it.", j))
+	}
+	return lines
 }
 
 // stateDir is where apply keeps its journals: $XDG_STATE_HOME/xdg-agents.

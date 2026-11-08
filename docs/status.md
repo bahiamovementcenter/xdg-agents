@@ -183,6 +183,16 @@ Paths in JSON are absolute. Text output shortens `$HOME` to `~`.
 
 `--check` lets dotfile setups and CI ask "is this machine tidy?".
 
+## What to run next
+
+The text report ends with a "Next:" section, left out of `--json`:
+
+- **`xdg-agents plan`,** with the same agent names, when the plan would have
+  steps. Plan decides what can move, so status never suggests an empty or
+  refused plan.
+- **`xdg-agents undo`,** with the journal's path, when an apply hasn't been
+  undone.
+
 ## Decisions
 
 Decided on 2026-11-07, as numbers 10 to 17 in `docs/decisions.md`:
