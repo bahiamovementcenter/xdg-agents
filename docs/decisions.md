@@ -12,7 +12,12 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 
 ## Open
 
-None right now.
+| # | Question | Options | Recommended |
+| :-- | :-- | :-- | :-- |
+| 28 | Group agents under one folder in each XDG directory (`~/.config/agents/claude`), or one folder per agent (`~/.config/claude`)? Programs almost always use their own name directly; vendor groups exist (`~/.config/JetBrains/…`) but there's no shared "agents" convention, and other tools (xdg-ninja) suggest `$XDG_CONFIG_HOME/claude`. Note: the desktop app already uses `~/.config/Claude`, which on a case-insensitive filesystem is the same folder as `~/.config/claude`. | **A** one folder per agent, as now · **B** a shared group folder | A |
+| 29 | Should `apply` require the plan's variables to be set *before* it moves anything? Otherwise an agent started in between finds its folder gone and starts afresh (a new, empty `~/.claude`). | **A** yes: refuse until they're set, as built · **B** no: move first, and tell the user to set them | A |
+| 30 | How should `apply` handle a running agent? | **A** refuse until it's quit, found by process name, as built · **B** warn and continue | A |
+| 31 | Where do the variables get set? | **A** the user adds the printed `export` lines; apply never edits shell profiles, as built · **B** apply writes an environment file (such as `~/.config/environment.d/60-xdg-agents.conf`) and records it in the journal for undo · **C** both: write the file, and print the lines for shells that don't read it | A |
 
 ## Decided
 

@@ -84,8 +84,13 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
 - `xdg-agents list` and `xdg-agents status` work (`main.go`, with
   `internal/layout`, `internal/xdg` and `internal/status`): `status` reports
   each installed agent's files with their category, target and how to move
-  them, as `docs/status.md` describes. `plan` and `apply` are still to be
-  written.
+  them, as `docs/status.md` describes.
+- `xdg-agents plan` (`internal/plan`) turns that report into the exact
+  moves, symlinks and variables, as `docs/plan.md` describes. It's
+  read-only too.
+- `xdg-agents apply` and `undo` (`internal/apply`) carry out a plan after
+  checking it and asking, recording each change in a journal that `undo`
+  reverses, as `docs/apply.md` describes. Linux only.
 
 ### First "done" check
 
@@ -120,7 +125,10 @@ From the development shell:
 ```sh
 go build -o xdg-agents .    # build
 ./xdg-agents status         # report this machine (read-only)
+./xdg-agents plan           # what would move where (read-only)
 ./xdg-agents list           # the layouts, and which agents are installed
+# apply and undo change real files: never run them against your own home
+# while developing (see Security); the tests use temporary homes
 go test ./...               # must pass before a change is done
 go vet ./...                # must pass
 golangci-lint run           # must pass

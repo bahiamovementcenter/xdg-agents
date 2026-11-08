@@ -151,3 +151,27 @@ func TestTextPlain(t *testing.T) {
 		}
 	}
 }
+
+// The variable set ahead of apply: files are reported where they still are
+func TestEnvSetBeforeMove(t *testing.T) {
+	home := t.TempDir()
+	mkfs(t, home, ".claude/settings.json", ".claude.json")
+	env := map[string]string{"HOME": home, "CLAUDE_CONFIG_DIR": filepath.Join(home, ".config/claude")}
+	r := Compute([]layout.Layout{claudeLayout(t)}, func(k string) string { return env[k] }, Options{})
+	if len(r.Agents) != 1 || !r.Agents[0].Installed {
+		t.Fatalf("agent not found while its variable points at a folder that doesn't exist yet: %+v", r.Agents)
+	}
+	var home0 RootInfo
+	for _, ro := range r.Agents[0].Roots {
+		if ro.Name == "home" {
+			home0 = ro
+		}
+	}
+	if home0.Path != filepath.Join(home, ".claude") || !home0.EnvPending {
+		t.Errorf("home root = %+v, want ~/.claude with the variable pending", home0)
+	}
+	got := items(r.Agents[0])
+	if got[".claude.json"].Location != filepath.Join(home, ".claude.json") || got["settings.json"].State != ToMove {
+		t.Errorf("items = %+v", got)
+	}
+}
