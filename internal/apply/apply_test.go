@@ -284,3 +284,67 @@ func TestCodexApplyThenUndo(t *testing.T) {
 		t.Errorf("undo didn't restore the home folder:\nbefore %v\nafter  %v", before, trimmed)
 	}
 }
+
+// OpenClaw's root goes to data, its config file to config by a variable of
+// its own, and a service note comes with the plan
+func TestOpenClawApplyThenUndo(t *testing.T) {
+	home := t.TempDir()
+	mkfs(t, home, ".openclaw/openclaw.json", ".openclaw/.env", ".openclaw/state/openclaw.sqlite",
+		".openclaw/agents/main/agent/openclaw-agent.sqlite", ".openclaw/workspace/AGENTS.md",
+		".openclaw/logs/config-health.json", ".openclaw/skills/s/SKILL.md")
+	env := map[string]string{
+		"HOME":                 home,
+		"OPENCLAW_STATE_DIR":   filepath.Join(home, ".local/share/openclaw"),
+		"OPENCLAW_CONFIG_PATH": filepath.Join(home, ".config/openclaw/openclaw.json"),
+	}
+	n := 0
+	opt := Options{
+		Getenv:   func(k string) string { return env[k] },
+		Running:  func([]string) []string { return nil },
+		StateDir: filepath.Join(home, ".local/state/xdg-agents"),
+		Now:      func() time.Time { n++; return time.Date(2026, 11, 8, 12, 0, n, 0, time.UTC) },
+	}
+	l, err := layout.Load("../../agents/openclaw.ncl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := tree(t, home)
+	p := plan.Build(status.Compute([]layout.Layout{l}, opt.Getenv, status.Options{UID: 1000}), "linux")
+	serviceNote := false
+	for _, nt := range p.Agents[0].Notes {
+		if strings.Contains(nt.Reason, "systemctl --user edit openclaw-gateway") {
+			serviceNote = true
+		}
+	}
+	if !serviceNote {
+		t.Errorf("the plan doesn't warn about the service: %+v", p.Agents[0].Notes)
+	}
+	journal, err := Apply(p, map[string][]string{"openclaw": {"openclaw"}}, opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{".config/openclaw/openclaw.json", ".local/share/openclaw/.env",
+		".local/share/openclaw/state/openclaw.sqlite", ".local/share/openclaw/workspace/AGENTS.md",
+		".local/state/openclaw/logs/config-health.json", ".config/openclaw/skills/s/SKILL.md",
+		".local/share/openclaw/skills/s/SKILL.md"} {
+		if _, err := os.Stat(filepath.Join(home, path)); err != nil {
+			t.Errorf("after apply, %s is missing: %v", path, err)
+		}
+	}
+	r := status.Compute([]layout.Layout{l}, opt.Getenv, status.Options{UID: 1000})
+	if n := r.Agents[0].Summary[status.ToMove]; n != 0 {
+		t.Errorf("after apply, status still has %d to move: %+v", n, r.Agents[0].Items)
+	}
+	if err := Undo(journal); err != nil {
+		t.Fatal(err)
+	}
+	var trimmed []string
+	for _, p := range tree(t, home) {
+		if !strings.HasPrefix(p, ".local/state/xdg-agents") && p != ".local/state/" && p != ".local/" {
+			trimmed = append(trimmed, p)
+		}
+	}
+	if !reflect.DeepEqual(trimmed, before) {
+		t.Errorf("undo didn't restore the home folder:\nbefore %v\nafter  %v", before, trimmed)
+	}
+}

@@ -95,7 +95,7 @@ func TestAgentNames(t *testing.T) {
 		t.Errorf("prefix claude:\n%s", out)
 	}
 	code, _, errOut := runWith(t, env, "status", "claud3")
-	if code != 2 || !strings.Contains(errOut, `no agent "claud3"; known: claude-code, claude-desktop, codex`) {
+	if code != 2 || !strings.Contains(errOut, `no agent "claud3"; known: claude-code, claude-desktop, codex, openclaw`) {
 		t.Errorf("unknown agent: exit %d, %q", code, errOut)
 	}
 }

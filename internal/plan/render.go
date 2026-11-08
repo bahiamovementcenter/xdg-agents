@@ -76,6 +76,6 @@ func Text(w io.Writer, p Plan, home string) error {
 			}
 		}
 	}
-	printf("\n`xdg-agents apply` will carry out a plan like this, reversibly. It isn't built yet.\n")
+	printf("\n`xdg-agents apply` carries out this plan, reversibly, after checking it and asking (docs/apply.md).\n")
 	return werr
 }

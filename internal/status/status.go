@@ -62,6 +62,8 @@ type RootInfo struct {
 	// are still at the default location: the state between setting the
 	// variable and running apply
 	EnvPending bool `json:"env_pending,omitempty"`
+	// What to know before moving the root, from the layout
+	Note string `json:"note,omitempty"`
 }
 
 // Agent is one agent's part of the report.
@@ -153,7 +155,7 @@ func agent(l layout.Layout, dirs xdg.Dirs, getenv func(string) string, opt Optio
 		if exists && (rr.fromEnv || strings.HasPrefix(def, "~/")) {
 			a.Installed = true
 		}
-		a.Roots = append(a.Roots, RootInfo{Name: n, Path: rr.path, Env: root.Env, FromEnv: rr.fromEnv, Exists: exists, Category: string(root.Category), Target: rr.target, EnvPending: rr.envPending})
+		a.Roots = append(a.Roots, RootInfo{Name: n, Path: rr.path, Env: root.Env, FromEnv: rr.fromEnv, Exists: exists, Category: string(root.Category), Target: rr.target, EnvPending: rr.envPending, Note: root.Note})
 	}
 
 	settingFor := map[string]layout.Setting{}

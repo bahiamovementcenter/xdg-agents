@@ -26,6 +26,19 @@ From the docs only: nothing seen on disk yet.
 | `~/.agents/skills` | docs | The skills page's user skills folder, shared with other agents, not under `CODEX_HOME` | Decide whether a shared `~/.agents` gets a layout of its own |
 | `tools/docsdrift` | — | Only checks Claude Code's docs | Add Codex's environment variables and config reference pages |
 
+## OpenClaw (`~/.openclaw`)
+
+From the docs only: nothing seen on disk yet.
+
+| Path | Seen | What we know | To settle it |
+| :-- | :-- | :-- | :-- |
+| The running check | docs | `apply` looks for a process named `openclaw`. Run from npm, the gateway may show as `node …/openclaw.mjs` or similar, which wouldn't match | See what the gateway's process looks like, then let a layout name its process names |
+| `~/.openclaw-<profile>` | docs | `OPENCLAW_PROFILE` gives each profile its own folder, laid out like `~/.openclaw` | Let a root's default hold a wildcard, or add profiles by hand |
+| Retired files (`identity/`, `delivery-queue/`, `session-delivery-queue/`, `plugins/installs.json`, `tasks/`, `flows/`, `plugin-state/`, `agent/`, `agent.legacy-*`) | docs (doctor) | Imported or kept by `openclaw doctor`; the docs say not to delete them first | Left unclassified on purpose, so they aren't shown as safe to delete. Add them if a "retired, keep" state is wanted |
+| Plugin packages | docs | "Installed plugins (plus their node_modules/)", not in backups, reinstalled after restore; folder not named | Probe, then likely cache |
+| `~/.clawdbot`, `~/.moltbot` | — | Older names; the docs don't mention the folders | Nothing until seen |
+| `~/.config/systemd/user/openclaw-gateway.service` | docs (uninstall) | Already in an XDG place; holds the service's environment once edited | Nothing to move. `apply` could check the unit has the variables (see the root's note) |
+
 ## Claude Code (`~/.claude`)
 
 Not in the docs, so `tools/docsdrift` can't catch them.
