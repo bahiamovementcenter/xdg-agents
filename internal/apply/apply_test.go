@@ -239,3 +239,48 @@ func TestNothingToDo(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+// Codex goes through the same apply and undo as Claude Code
+func TestCodexApplyThenUndo(t *testing.T) {
+	home := t.TempDir()
+	mkfs(t, home, ".codex/config.toml", ".codex/auth.json", ".codex/sessions/2026/s.jsonl",
+		".codex/log/codex-tui.log", ".codex/packages/standalone/x")
+	env := map[string]string{"HOME": home, "CODEX_HOME": filepath.Join(home, ".config/codex")}
+	n := 0
+	opt := Options{
+		Getenv:   func(k string) string { return env[k] },
+		Running:  func([]string) []string { return nil },
+		StateDir: filepath.Join(home, ".local/state/xdg-agents"),
+		Now:      func() time.Time { n++; return time.Date(2026, 11, 8, 12, 0, n, 0, time.UTC) },
+	}
+	l, err := layout.Load("../../agents/codex.ncl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := tree(t, home)
+	p := plan.Build(status.Compute([]layout.Layout{l}, opt.Getenv, status.Options{UID: 1000}), "linux")
+	names := map[string][]string{"codex": {"codex"}}
+	journal, err := Apply(p, names, opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{".config/codex/config.toml", ".config/codex/auth.json",
+		".local/state/codex/sessions/2026/s.jsonl", ".local/state/codex/log/codex-tui.log", ".cache/codex/packages/standalone/x",
+		".config/codex/sessions/2026/s.jsonl", ".config/codex/packages/standalone/x"} {
+		if _, err := os.Stat(filepath.Join(home, path)); err != nil {
+			t.Errorf("after apply, %s is missing: %v", path, err)
+		}
+	}
+	if err := Undo(journal); err != nil {
+		t.Fatal(err)
+	}
+	var trimmed []string
+	for _, p := range tree(t, home) {
+		if !strings.HasPrefix(p, ".local/state/xdg-agents") && p != ".local/state/" && p != ".local/" {
+			trimmed = append(trimmed, p)
+		}
+	}
+	if !reflect.DeepEqual(trimmed, before) {
+		t.Errorf("undo didn't restore the home folder:\nbefore %v\nafter  %v", before, trimmed)
+	}
+}

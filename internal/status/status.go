@@ -279,6 +279,18 @@ func unlisted(l layout.Layout, roots map[string]resolvedRoot) []Item {
 			first, _, _ := strings.Cut(e.Path, "/")
 			covered[first] = true
 		}
+		// A pattern such as *.config.toml covers every name it matches
+		isCovered := func(name string) bool {
+			if covered[name] {
+				return true
+			}
+			for c := range covered {
+				if ok, _ := filepath.Match(c, name); ok && strings.Contains(c, "*") {
+					return true
+				}
+			}
+			return false
+		}
 		var untracked []string
 		for _, u := range l.Untracked {
 			first, _, _ := strings.Cut(u.Path, "/")
@@ -293,7 +305,7 @@ func unlisted(l layout.Layout, roots map[string]resolvedRoot) []Item {
 		}
 		for _, d := range entries {
 			name := d.Name()
-			if covered[name] {
+			if isCovered(name) {
 				continue
 			}
 			it := Item{Root: n, Path: name, Location: filepath.Join(rr.path, name), Present: true, State: Unclassified}

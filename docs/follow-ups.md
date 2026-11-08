@@ -15,6 +15,17 @@ Where seen:
   Code 2.1.280, 2026-11-07
 - **cloud**: a Claude Code cloud session container, 2026-11-07
 
+## Codex CLI (`~/.codex`)
+
+From the docs only: nothing seen on disk yet.
+
+| Path | Seen | What we know | To settle it |
+| :-- | :-- | :-- | :-- |
+| The SQLite state database | docs | Under `CODEX_HOME` unless `CODEX_SQLITE_HOME` or `sqlite_home` moves it; holds agent jobs and resumable state. The file name isn't documented. | Probe Codex to learn the name, then add it (likely state) with `move = 'env` |
+| `sessions/` | docs | Only named in the environment variables page's list of what `CODEX_HOME` holds | Probe to confirm its contents (transcripts, so state and sensitive, as in the layout) |
+| `~/.agents/skills` | docs | The skills page's user skills folder, shared with other agents, not under `CODEX_HOME` | Decide whether a shared `~/.agents` gets a layout of its own |
+| `tools/docsdrift` | — | Only checks Claude Code's docs | Add Codex's environment variables and config reference pages |
+
 ## Claude Code (`~/.claude`)
 
 Not in the docs, so `tools/docsdrift` can't catch them.

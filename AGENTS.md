@@ -81,6 +81,9 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
   written from a listing of a real `~/.config/Claude` (the folder isn't
   documented). Its unknown files are left out on purpose, to be reported as
   unclassified.
+- `agents/codex.ncl`: OpenAI's Codex CLI, written from its docs.
+  `CODEX_HOME` moves all of `~/.codex`. What the docs don't name (the
+  SQLite state file) is left out, to be reported as unclassified.
 - `xdg-agents list` and `xdg-agents status` work (`main.go`, with
   `internal/layout`, `internal/xdg` and `internal/status`): `status` reports
   each installed agent's files with their category, target and how to move
