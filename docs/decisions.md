@@ -12,18 +12,13 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 
 ## Open
 
-| # | Question | Options | Recommended |
-| :-- | :-- | :-- | :-- |
-| 28 | Group agents under one folder in each XDG directory (`~/.config/agents/claude`), or one folder per agent (`~/.config/claude`)? Programs almost always use their own name directly; vendor groups exist (`~/.config/JetBrains/…`) but there's no shared "agents" convention, and other tools (xdg-ninja) suggest `$XDG_CONFIG_HOME/claude`. Note: the desktop app already uses `~/.config/Claude`, which on a case-insensitive filesystem is the same folder as `~/.config/claude`. | **A** one folder per agent, as now · **B** a shared group folder | A |
-| 29 | Should `apply` require the plan's variables to be set *before* it moves anything? Otherwise an agent started in between finds its folder gone and starts afresh (a new, empty `~/.claude`). | **A** yes: refuse until they're set, as built · **B** no: move first, and tell the user to set them | A |
-| 30 | How should `apply` handle a running agent? | **A** refuse until it's quit, found by process name, as built · **B** warn and continue | A |
-| 31 | Where do the variables get set? | **A** the user adds the printed `export` lines; apply never edits shell profiles, as built · **B** apply writes an environment file (such as `~/.config/environment.d/60-xdg-agents.conf`) and records it in the journal for undo · **C** both: write the file, and print the lines for shells that don't read it | A |
+None.
 
 ## Decided
 
-All answered "all recommended" on 2026-11-07. Where a decision changed
-the design, it's recorded in the place it names: ADR-0001 to ADR-0004,
-`docs/status.md`.
+Numbers 1 to 27 were answered "all recommended" on 2026-11-07, and 28 to 31
+on 2026-11-08. Where a decision changed the design, it's recorded in the
+place it names: ADR-0001 to ADR-0004, `docs/status.md`, `docs/apply.md`.
 
 
 ### Working together
@@ -77,3 +72,12 @@ the design, it's recorded in the place it names: ADR-0001 to ADR-0004,
 | 25 | Probes that run real sessions, to see the files only sessions create (`projects/`, `sessions/`, `file-history/`, `tasks/`…)? | **E** a fake model server of our own (`tools/fakemodel`, Go) that speaks the Anthropic and OpenAI APIs, needs no login and works offline inside the Nix sandbox and CI. It replies with a fixed script of tool calls, matched by purpose to the tools each agent offers (a harmless shell command, an edit in the probe's throwaway project, a to-do list), then a closing text naming the tools the agent offered and used. One script, with a thin adapter per wire protocol (Anthropic Messages, OpenAI, Gemini); the script's shape (replies made of text, thinking and tool-call blocks) follows the faux provider in [pi](https://github.com/earendil-works/pi)'s `ai` package, which is in-memory only and so can't serve other agents itself. Agents are pointed at it with `ANTHROPIC_BASE_URL` (and their equivalents) and a dummy key · **A** on the owner's machine with a real login, in a fresh, empty `CLAUDE_CONFIG_DIR` (`/login` saves the login inside that folder, so deleting the folder removes it), then listing names; for what only real sessions show · **B** real logins in CI, with a token (`claude setup-token` → `CLAUDE_CODE_OAUTH_TOKEN`) stored as a GitHub secret · **C** through [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI), which re-exposes subscription logins to other clients: likely against providers' terms, and it holds live tokens · **D** none | **E** (2026-11-07) |
 | 26 | How should probing scale beyond Claude Code? | **A** automatic: a scheduled CI job probes every [llm-agents.nix](https://github.com/numtide/llm-agents.nix) package, and again when its version changes. Nothing is written per agent: the program comes from the package (`meta.mainProgram`); every common model variable (`ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL`, Gemini's…) points at the fake model at once, which tells the protocol from the request path; how to run once non-interactively, how to allow tools, and which `*_HOME`/`*_CONFIG_DIR` variable moves the folder are found from `--help` and tried in turn. Results are saved per agent and version, and what's reviewed is the change. A small override is written only for an agent the heuristics can't start, which the run reports · **B** a hand-written `probe` block in each layout | **A** (2026-11-07) |
 | 27 | The first "done" check in `AGENTS.md` (`./xdg-agents status` on Claude Code) isn't built: nothing reads the real machine yet. The probe and docs checks make the layout data trustworthy but don't move that check. Who builds `status` now, as `docs/status.md` describes (decisions 10 to 17)? | **A** Claude, in the next PR · **B** the owner (who planned the unclassified reporting) · **C** something else first | **A** (2026-11-07) |
+
+### `apply` (see `docs/apply.md`)
+
+| # | Question | Options | Answer |
+| :-- | :-- | :-- | :-- |
+| 28 | Group agents under one folder in each XDG directory (`~/.config/agents/claude`), or one folder per agent (`~/.config/claude`)? Programs almost always use their own name directly; vendor groups exist (`~/.config/JetBrains/…`) but there's no shared "agents" convention, and other tools (xdg-ninja) suggest `$XDG_CONFIG_HOME/claude`. Note: the desktop app already uses `~/.config/Claude`, which on a case-insensitive filesystem is the same folder as `~/.config/claude`. | **A** one folder per agent, as now · **B** a shared group folder | **A** (2026-11-08) |
+| 29 | Should `apply` require the plan's variables to be set *before* it moves anything? Otherwise an agent started in between finds its folder gone and starts afresh (a new, empty `~/.claude`). | **A** yes: refuse until they're set, as built · **B** no: move first, and tell the user to set them | **A** (2026-11-08) |
+| 30 | How should `apply` handle a running agent? | **A** refuse until it's quit, found by process name, as built · **B** warn and continue | **A** (2026-11-08) |
+| 31 | Where do the variables get set? | **A** the user adds the printed `export` lines; apply never edits shell profiles, as built · **B** apply writes an environment file (such as `~/.config/environment.d/60-xdg-agents.conf`) and records it in the journal for undo · **C** both: write the file, and print the lines for shells that don't read it | **A** (2026-11-08) |

@@ -74,6 +74,7 @@ leaving the rest for a person to look at.
 
 ## Decisions
 
-Built with the recommended answers to decisions 29 to 31 in
-`docs/decisions.md`: variables first, the agent must not be running, and
-no editing of shell profiles. Each can change.
+Decided on 2026-11-08, as numbers 28 to 31 in `docs/decisions.md`: one
+folder per agent (`~/.config/claude`, not a shared group folder),
+variables first, the agent must not be running, and no editing of shell
+profiles.
