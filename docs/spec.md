@@ -66,7 +66,7 @@ AGENT_OUTPUTS_DIR="$HOME/Projects/Agents/Outputs"
 | :-- | :-- | :-- |
 | `AGENT_HOME_DIR` | The agent-homeDir; the others default under it. Under `XDG_PROJECTS_DIR`, or `~/Agents` when there's none (decision 32) | `$HOME` |
 | `AGENT_WORKSPACE_DIR` | Scratch space for work that isn't in any project | `XDG_DESKTOP_DIR` |
-| `AGENT_MEMORY_DIR` | Memory a person can read and edit: `<agent>/` for each agent's own, and `common/memory.<agent>.md`, which every agent reads (decision 33) | `XDG_DOCUMENTS_DIR` |
+| `AGENT_MEMORY_DIR` | Memory a person can read and edit, laid out as in [Memory](#memory) (decision 33) | `XDG_DOCUMENTS_DIR` |
 | `AGENT_SKILLS_DIR` | Skills a person writes or installs, shared by every agent (decision 34) | none |
 | `AGENT_PROMPTS_DIR` | Reusable prompts and commands | `XDG_TEMPLATES_DIR` |
 | `AGENT_INBOX_DIR` | Files handed to agents | `XDG_DOWNLOAD_DIR` |
@@ -95,6 +95,34 @@ The rules are those of `user-dirs.dirs`:
   part of its own uses a subfolder named after itself, such as
   `Memory/claude/`.
 
+### Memory
+
+Agents keep memory as Markdown, and the one convention they share is a
+`MEMORY.md` index with topic files beside it (Claude Code's auto memory,
+OpenClaw's workspace). `AGENT_MEMORY_DIR` keeps to it:
+
+```
+Memory/
+  shared/                  # read by every agent
+    MEMORY.md              # index
+    <topic>.md
+    memory.<agent>.md      # optional: what an agent wants the others to know
+  <agent>/                 # each agent's own files, named as the agent names them
+  projects/<project-key>/  # personal memory for one project: same layout as Memory/
+```
+
+Memory for a project comes in two kinds:
+
+- **Personal** (the default): `Memory/projects/<project-key>/`, outside the
+  repository, as Claude Code keeps auto memory in
+  `~/.claude/projects/<project>/memory/`. Agents write memory on their own,
+  so it shouldn't land in a repository by default.
+- **Shared** (opt in): `<project>/.agents/memory/`, committed, with the
+  same layout. A note moves there on purpose once it's worth sharing.
+
+An agent reads personal project memory, then shared project memory, then
+`Memory/shared/` and its own `Memory/<agent>/`.
+
 ## 3. Scopes: managed, user, project, local
 
 Agents read the same kind of file from several places. XDG already has two
@@ -115,8 +143,8 @@ add two more, inside a project (decision 35):
   rather than replacing it, and the same goes for prompts.
 - **No state, cache, logs or credentials in a project** (decision 35).
   They go in the user's directories, keyed by project (section 1). A
-  project's memory uses the same layout as `AGENT_MEMORY_DIR`, in
-  `<project>/.agents/memory/`.
+  project's shared memory is the exception that's committed: see
+  [Memory](#memory).
 - **Local files are gitignored,** and never hold credentials or state.
 
 ## What `xdg-agents` checks

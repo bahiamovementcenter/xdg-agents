@@ -17,7 +17,6 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 | # | Question | Options |
 | :-- | :-- | :-- |
 | 32 | Where is the agent-homeDir (`AGENT_HOME_DIR`), the folder that holds the shared Workspace, Memory, Skills, Prompts, Inbox and Outputs folders? Several agents (Amp, Cline, Codex, Cursor, Gemini CLI) already read skills from a hidden `~/.agents/skills`, but nobody owns that convention. | **A** visible `~/Agents`, like `~/Documents` · **B** hidden `~/.agents`, matching what agents already read · **C** `$XDG_CONFIG_HOME/agents` (hidden, and mixes content with settings) · **D** `$XDG_PROJECTS_DIR/Agents` (`~/Projects/Agents`), which falls back to `~/Agents` when there's no Projects folder (recommended: no new top-level folder, and it follows decision 37) |
-| 33 | How is `AGENT_MEMORY_DIR` laid out? | **A** a folder per agent (`Memory/<agent>/<name>.md`) plus `Memory/common/`, where each agent keeps one file every agent reads (`memory.<agent>.md`); a project can have the same layout in `<project>/.agents/memory/` (recommended, from the owner's suggestion) · **B** a folder per agent only · **C** one shared folder |
 | 34 | Skills are folders with a `SKILL.md` that teach an agent a task ("how we release", "our SQL style"). Are they treated like documents a person writes and shares between agents (visible, in `AGENT_SKILLS_DIR`), or like settings (hidden, in `$XDG_CONFIG_HOME/agents/skills`, backed up with dotfiles)? | **A** like documents, in `AGENT_SKILLS_DIR` (recommended) · **B** like settings |
 | 35 | Adopt the four scopes and their precedence (local, project, user, managed)? And what may live inside a project? | **A** the four scopes; a project may hold configuration and shared content (instructions, settings, skills, prompts, memory), but never state, cache, logs or credentials, which go in the user's directories keyed by project (recommended: decision 33A puts memory in projects) · **B** the four scopes, configuration only in a project · **C** change the scopes (say how) |
 | 36 | A global `AGENTS.md` and other configuration every agent should read, in `$XDG_CONFIG_HOME/agents/`? Today each agent reads only its own (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`), so `plan` would link each of those to the shared file. Each agent keeps its own folder for the rest (decision 28). | **A** yes (recommended: write instructions once for every agent) · **B** no, only each agent's own files |
@@ -25,7 +24,7 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 ## Decided
 
 Numbers 1 to 27 were answered "all recommended" on 2026-11-07, 28 to 31
-on 2026-11-08, and 37 on 2026-11-11. Where a decision changed the design, it's recorded in the
+on 2026-11-08, and 33 and 37 on 2026-11-11. Where a decision changed the design, it's recorded in the
 place it names: ADR-0001 to ADR-0004, `docs/status.md`, `docs/apply.md`.
 
 
@@ -95,3 +94,4 @@ place it names: ADR-0001 to ADR-0004, `docs/status.md`, `docs/apply.md`.
 | # | Question | Options | Answer |
 | :-- | :-- | :-- | :-- |
 | 37 | Projects: rely on `XDG_PROJECTS_DIR` from xdg-user-dirs, or add an `AGENT_PROJECTS_DIR` of our own? | **A** `XDG_PROJECTS_DIR`, falling back to the folder an agent is started in (recommended) · **B** our own variable | **A** (2026-11-11) |
+| 33 | How is `AGENT_MEMORY_DIR` laid out? | **A** a folder per agent, a shared folder every agent reads, and project memory · **B** a folder per agent only · **C** one shared folder | **A**, with the owner's changes (2026-11-11): `Memory/<agent>/` keeps each agent's own files; `Memory/shared/` (not `common/`) has a `MEMORY.md` index, topic files and an optional `memory.<agent>.md` per agent; project memory is personal by default (`Memory/projects/<project-key>/`) and shared by choice (`<project>/.agents/memory/`). See `docs/spec.md`. |
