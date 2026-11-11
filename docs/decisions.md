@@ -12,7 +12,16 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 
 ## Open
 
-None.
+### The agent directories spec (see `docs/spec.md`)
+
+| # | Question | Options |
+| :-- | :-- | :-- |
+| 32 | Where is the agent-homeDir (`AGENT_HOME_DIR`)? Several agents (Amp, Cline, Codex, Cursor, Gemini CLI) already read skills from a hidden `~/.agents/skills`, but nobody owns that convention, and xdg-user-dirs folders are visible. | **A** visible `~/Agents`, like `~/Documents` (recommended: it's content a person opens) · **B** hidden `~/.agents`, matching what agents already read · **C** `$XDG_DATA_HOME/agents` |
+| 33 | Is `AGENT_MEMORY_DIR` shared by every agent, or split per agent? | **A** a subfolder per agent (`Memory/claude/`), any agent may read the others (recommended: memory formats differ between agents) · **B** one shared folder |
+| 34 | Are skills content (`AGENT_SKILLS_DIR`) or configuration (`$XDG_CONFIG_HOME/agents/skills`)? | **A** content: a person writes and installs them, and they're shared (recommended) · **B** configuration |
+| 35 | Adopt the four scopes and their precedence (local, project, user, managed), with only configuration allowed inside a project? | **A** yes, as in the spec (recommended) · **B** change it (say how) |
+| 36 | Configuration shared by every agent (a global `AGENTS.md`): in `$XDG_CONFIG_HOME/agents/`, beside each agent's own folder (decision 28 stays)? | **A** yes (recommended) · **B** only in each agent's own folder |
+| 37 | Projects: rely on `XDG_PROJECTS_DIR` from xdg-user-dirs, or add an `AGENT_PROJECTS_DIR` of our own? | **A** `XDG_PROJECTS_DIR`, falling back to the folder an agent is started in (recommended) · **B** our own variable |
 
 ## Decided
 
