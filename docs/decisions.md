@@ -16,8 +16,8 @@ None.
 
 ## Decided
 
-Numbers 1 to 27 were answered "all recommended" on 2026-11-07, and 28 to 31
-on 2026-11-08. Where a decision changed the design, it's recorded in the
+Numbers 1 to 27 were answered "all recommended" on 2026-11-07, 28 to 31
+on 2026-11-08, and 32 to 37 on 2026-11-11. Where a decision changed the design, it's recorded in the
 place it names: ADR-0001 to ADR-0004, `docs/status.md`, `docs/apply.md`.
 
 
@@ -81,3 +81,14 @@ place it names: ADR-0001 to ADR-0004, `docs/status.md`, `docs/apply.md`.
 | 29 | Should `apply` require the plan's variables to be set *before* it moves anything? Otherwise an agent started in between finds its folder gone and starts afresh (a new, empty `~/.claude`). | **A** yes: refuse until they're set, as built · **B** no: move first, and tell the user to set them | **A** (2026-11-08) |
 | 30 | How should `apply` handle a running agent? | **A** refuse until it's quit, found by process name, as built · **B** warn and continue | **A** (2026-11-08) |
 | 31 | Where do the variables get set? | **A** the user adds the printed `export` lines; apply never edits shell profiles, as built · **B** apply writes an environment file (such as `~/.config/environment.d/60-xdg-agents.conf`) and records it in the journal for undo · **C** both: write the file, and print the lines for shells that don't read it | **A** (2026-11-08) |
+
+### The agent directories spec (see `docs/spec.md`)
+
+| # | Question | Options | Answer |
+| :-- | :-- | :-- | :-- |
+| 37 | Projects: rely on `XDG_PROJECTS_DIR` from xdg-user-dirs, or add an `AGENT_PROJECTS_DIR` of our own? | **A** `XDG_PROJECTS_DIR`, falling back to the folder an agent is started in (recommended) · **B** our own variable | **A** (2026-11-11) |
+| 33 | How is `AGENT_MEMORY_DIR` laid out? | **A** a folder per agent, a shared folder every agent reads, and project memory · **B** a folder per agent only · **C** one shared folder | **A**, with the owner's changes (2026-11-11): `Memory/<agent>/` keeps each agent's own files; `Memory/shared/` (not `common/`) has a `MEMORY.md` index, topic files and an optional `memory.<agent>.md` per agent; project memory is personal by default (`Memory/projects/<project-key>/`) and shared by choice (`<project>/.agents/memory/`). See `docs/spec.md`. |
+| 32 | Where is the agent-homeDir (`AGENT_HOME_DIR`)? | **A** visible `~/Agents` · **B** hidden `~/.agents` · **C** `$XDG_CONFIG_HOME/agents` · **D** `~/Projects/Agents` | **B**, with a visible view (2026-11-11): the folders live in `~/.agents` with lowercase names, where agents already look, and `~/Agents` holds one link per folder (`Memory -> ~/.agents/memory`, `Skills -> ~/.agents/skills`, …), made by `apply`. Chosen first as A the same day, then changed after the owner proposed per-folder links. D was dropped because, under decision 37, `~/Projects/Agents` would itself count as a project. |
+| 34 | Skills, subagents and rules: shared content a person writes, in `~/.agents` (`skills/`, `agents/`, `rules/`), or each agent's configuration, in its own folder under `$XDG_CONFIG_HOME`? | **A** shared content in `~/.agents`, linked from agents that read only their own folders (`.agents/skills` is already as common as `.claude/skills`, `docs/survey/2026-11-11.tsv`) · **B** configuration, per agent | **A** (2026-11-11) |
+| 35 | Adopt the four scopes and their precedence (local, project, user, managed)? And what may live inside a project? | **A** the four scopes; a project may hold configuration and shared content (instructions, settings, skills, subagents, rules, memory), but never state, cache, logs or credentials, which go in the user's directories keyed by project (decision 33A puts memory in projects) · **B** the four scopes, configuration only in a project · **C** change the scopes (say how) | **A** (2026-11-11) |
+| 36 | Where do instructions for every agent go? Today each agent reads only its own (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`), so `plan` would link each of those to the shared file. | **A** `~/.agents/AGENTS.md`, beside the other shared folders, as the `.agents` proposals do · **B** `$XDG_CONFIG_HOME/agents/AGENTS.md` (47 files on GitHub, `docs/survey/2026-11-11.tsv`) · **C** only each agent's own file | **A** (2026-11-11) |

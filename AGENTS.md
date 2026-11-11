@@ -62,6 +62,10 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
   above says, evaluates the layouts through [go-nickel][go-nickel], and
   reports, plans or applies.
 - **Decisions** are recorded in `docs/adr/`.
+- **The agent directories spec** (`docs/spec.md`, a draft) adapts the
+  Base Directory spec and xdg-user-dirs to agents: agent-baseDir,
+  agent-homeDir (`agent-dirs.dirs`) and the managed, user, project and
+  local scopes.
 - **Probes** (`tools/probe`, with the fake model in `internal/fakemodel`) run
   an agent through a scripted session in throwaway folders and check its
   layout against what it writes: see `docs/probes.md`.

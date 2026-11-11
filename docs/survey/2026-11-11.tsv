@@ -1,0 +1,25 @@
+date	label	query	count
+2026-11-11	skills, shared (.agents)	filename:SKILL.md path:.agents/skills	512000
+2026-11-11	skills, Claude Code	filename:SKILL.md path:.claude/skills	553984
+2026-11-11	skills, Codex	filename:SKILL.md path:.codex/skills	46400
+2026-11-11	skills, Gemini CLI	filename:SKILL.md path:.gemini/skills	19552
+2026-11-11	skills, GitHub	filename:SKILL.md path:.github/skills	108032
+2026-11-11	skills, XDG config	filename:SKILL.md path:.config/agents/skills	295
+2026-11-11	subagents, shared (.agents)	path:.agents/agents extension:md	14080
+2026-11-11	subagents, Claude Code	path:.claude/agents extension:md	281600
+2026-11-11	subagents, Codex	path:.codex/agents extension:toml	33856
+2026-11-11	subagents, Gemini CLI	path:.gemini/agents extension:md	3904
+2026-11-11	memory, shared (.agents)	path:.agents/memory	48064
+2026-11-11	memory, MEMORY.md anywhere	filename:MEMORY.md	133376
+2026-11-11	instructions, AGENTS.md	filename:AGENTS.md	1230848
+2026-11-11	instructions, CLAUDE.md	filename:CLAUDE.md	1040384
+2026-11-11	instructions, GEMINI.md	filename:GEMINI.md	71296
+2026-11-11	instructions, .agents/AGENTS.md	filename:AGENTS.md path:.agents	13984
+2026-11-11	instructions, XDG config	filename:AGENTS.md path:.config/agents	47
+2026-11-11	prompts, Copilot	path:.github/prompts extension:md	67968
+2026-11-11	prompts, Claude commands	path:.claude/commands extension:md	219648
+2026-11-11	prompts, Gemini commands	path:.gemini/commands extension:toml	9760
+2026-11-11	prompts, Codex	path:.codex/prompts extension:md	3960
+2026-11-11	workflows, Windsurf	path:.windsurf/workflows extension:md	6176
+2026-11-11	workflows, Cline	path:.clinerules/workflows extension:md	1732
+2026-11-11	patterns, Fabric	filename:system.md path:fabric/patterns	675
