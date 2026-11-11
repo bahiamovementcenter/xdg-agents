@@ -53,20 +53,20 @@ agent's own files above.
 
 ```sh
 # $XDG_CONFIG_HOME/agent-dirs.dirs
-AGENT_HOME_DIR="$HOME/Agents"
-AGENT_WORKSPACE_DIR="$HOME/Agents/Workspace"
-AGENT_MEMORY_DIR="$HOME/Agents/Memory"
-AGENT_SKILLS_DIR="$HOME/Agents/Skills"
-AGENT_PROMPTS_DIR="$HOME/Agents/Prompts"
-AGENT_INBOX_DIR="$HOME/Agents/Inbox"
-AGENT_OUTPUTS_DIR="$HOME/Agents/Outputs"
+AGENT_HOME_DIR="$HOME/Projects/Agents"
+AGENT_WORKSPACE_DIR="$HOME/Projects/Agents/Workspace"
+AGENT_MEMORY_DIR="$HOME/Projects/Agents/Memory"
+AGENT_SKILLS_DIR="$HOME/Projects/Agents/Skills"
+AGENT_PROMPTS_DIR="$HOME/Projects/Agents/Prompts"
+AGENT_INBOX_DIR="$HOME/Projects/Agents/Inbox"
+AGENT_OUTPUTS_DIR="$HOME/Projects/Agents/Outputs"
 ```
 
 | Variable | Holds | Like (xdg-user-dirs) |
 | :-- | :-- | :-- |
-| `AGENT_HOME_DIR` | The agent-homeDir; the others default under it (decision 32) | `$HOME` |
+| `AGENT_HOME_DIR` | The agent-homeDir; the others default under it. Under `XDG_PROJECTS_DIR`, or `~/Agents` when there's none (decision 32) | `$HOME` |
 | `AGENT_WORKSPACE_DIR` | Scratch space for work that isn't in any project | `XDG_DESKTOP_DIR` |
-| `AGENT_MEMORY_DIR` | Memory a person can read and edit, in a subfolder per agent (decision 33) | `XDG_DOCUMENTS_DIR` |
+| `AGENT_MEMORY_DIR` | Memory a person can read and edit: `<agent>/` for each agent's own, and `common/memory.<agent>.md`, which every agent reads (decision 33) | `XDG_DOCUMENTS_DIR` |
 | `AGENT_SKILLS_DIR` | Skills a person writes or installs, shared by every agent (decision 34) | none |
 | `AGENT_PROMPTS_DIR` | Reusable prompts and commands | `XDG_TEMPLATES_DIR` |
 | `AGENT_INBOX_DIR` | Files handed to agents | `XDG_DOWNLOAD_DIR` |
@@ -105,7 +105,7 @@ add two more, inside a project (decision 35):
 | :-- | :-- | :-- | :-- |
 | Managed | `$XDG_CONFIG_DIRS` | everyone on the machine | Configuration only; read only |
 | User | sections 1 and 2 above | no one | Everything an agent keeps |
-| Project | `<project>/.agents/`, and the agent's own folder (`.claude/`, `.codex/`) | everyone with the repository | Configuration only, committed: `AGENTS.md`, settings, skills, prompts |
+| Project | `<project>/.agents/`, and the agent's own folder (`.claude/`, `.codex/`) | everyone with the repository | Configuration and shared content, committed: `AGENTS.md`, settings, skills, prompts, memory |
 | Local | Beside the project's files, named `*.local.*` | no one | Personal configuration, never committed |
 
 - **Precedence**, highest first: local, project, user, managed. This is the
@@ -113,8 +113,10 @@ add two more, inside a project (decision 35):
 - **A project is a folder under `XDG_PROJECTS_DIR`** or any folder an agent
   is started in. `<project>/.agents/skills/` adds to `AGENT_SKILLS_DIR`
   rather than replacing it, and the same goes for prompts.
-- **Nothing but configuration lives in a project.** Data, state and cache
-  for a project go in the user's directories, keyed by project (section 1).
+- **No state, cache, logs or credentials in a project** (decision 35).
+  They go in the user's directories, keyed by project (section 1). A
+  project's memory uses the same layout as `AGENT_MEMORY_DIR`, in
+  `<project>/.agents/memory/`.
 - **Local files are gitignored,** and never hold credentials or state.
 
 ## What `xdg-agents` checks
