@@ -38,6 +38,9 @@ prompts, Codex	path:.codex/prompts extension:md
 workflows, Windsurf	path:.windsurf/workflows extension:md
 workflows, Cline	path:.clinerules/workflows extension:md
 patterns, Fabric	filename:system.md path:fabric/patterns
+prompts, shared (.agents)	path:.agents/prompts extension:md
+commands, shared (.agents)	path:.agents/commands extension:md
+workflows, shared (.agents)	path:.agents/workflows extension:md
 Q
 )
 
