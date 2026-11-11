@@ -53,24 +53,46 @@ agent's own files above.
 
 ```sh
 # $XDG_CONFIG_HOME/agent-dirs.dirs
-AGENT_HOME_DIR="$HOME/Agents"
-AGENT_WORKSPACE_DIR="$HOME/Agents/Workspace"
-AGENT_MEMORY_DIR="$HOME/Agents/Memory"
-AGENT_SKILLS_DIR="$HOME/Agents/Skills"
-AGENT_PROMPTS_DIR="$HOME/Agents/Prompts"
-AGENT_INBOX_DIR="$HOME/Agents/Inbox"
-AGENT_OUTPUTS_DIR="$HOME/Agents/Outputs"
+AGENT_HOME_DIR="$HOME/.agents"
+AGENT_WORKSPACE_DIR="$HOME/.agents/workspace"
+AGENT_MEMORY_DIR="$HOME/.agents/memory"
+AGENT_SKILLS_DIR="$HOME/.agents/skills"
+AGENT_PROMPTS_DIR="$HOME/.agents/prompts"
+AGENT_INBOX_DIR="$HOME/.agents/inbox"
+AGENT_OUTPUTS_DIR="$HOME/.agents/outputs"
 ```
 
 | Variable | Holds | Like (xdg-user-dirs) |
 | :-- | :-- | :-- |
-| `AGENT_HOME_DIR` | The agent-homeDir, visible like `~/Documents`; the others default under it (decision 32) | `$HOME` |
+| `AGENT_HOME_DIR` | The agent-homeDir; the others default under it. `~/.agents`, where agents already look, with `~/Agents` as a visible view of it (decision 32) | `$HOME` |
 | `AGENT_WORKSPACE_DIR` | Scratch space for work that isn't in any project | `XDG_DESKTOP_DIR` |
 | `AGENT_MEMORY_DIR` | Memory a person can read and edit, laid out as in [Memory](#memory) (decision 33) | `XDG_DOCUMENTS_DIR` |
 | `AGENT_SKILLS_DIR` | Skills a person writes or installs, shared by every agent (decision 34) | none |
 | `AGENT_PROMPTS_DIR` | Reusable prompts and commands | `XDG_TEMPLATES_DIR` |
 | `AGENT_INBOX_DIR` | Files handed to agents | `XDG_DOWNLOAD_DIR` |
 | `AGENT_OUTPUTS_DIR` | What agents make for a person | none |
+
+The folders live in `~/.agents`, with lowercase names, because that's
+where agents already look: Codex, Amp, Cline, Cursor and Gemini CLI read
+`~/.agents/skills`, and the `.agents` proposals use the same folder. A
+person sees them in **`~/Agents`**, a visible folder that holds one link
+per folder and nothing else (decision 32):
+
+```
+~/Agents/
+  Memory    -> ~/.agents/memory
+  Skills    -> ~/.agents/skills
+  Prompts   -> ~/.agents/prompts
+  Workspace -> ~/.agents/workspace
+  Inbox     -> ~/.agents/inbox
+  Outputs   -> ~/.agents/outputs
+```
+
+Linking each folder, rather than `~/Agents` as a whole, means other tools'
+files in `~/.agents` (a `tasks/` folder, configuration) don't show up in
+`~/Agents`, and the capitalised names don't have to match the lowercase
+ones. `apply` makes the links and `undo` removes them. Backups must
+include `~/.agents` itself, since many backup tools don't follow links.
 
 Projects aren't in the list: `XDG_PROJECTS_DIR`, which xdg-user-dirs turned
 on by default in 0.20 (April 2026), already says where they live
@@ -93,7 +115,7 @@ The rules are those of `user-dirs.dirs`:
   overrides the file.
 - **Sharing.** The folders are shared by every agent. An agent that needs a
   part of its own uses a subfolder named after itself, such as
-  `Memory/claude/`.
+  `memory/claude/`.
 
 ### Memory
 
@@ -102,18 +124,18 @@ Agents keep memory as Markdown, and the one convention they share is a
 OpenClaw's workspace). `AGENT_MEMORY_DIR` keeps to it:
 
 ```
-Memory/
+memory/
   shared/                  # read by every agent
     MEMORY.md              # index
     <topic>.md
     memory.<agent>.md      # optional: what an agent wants the others to know
   <agent>/                 # each agent's own files, named as the agent names them
-  projects/<project-key>/  # personal memory for one project: same layout as Memory/
+  projects/<project-key>/  # personal memory for one project: same layout as memory/
 ```
 
 Memory for a project comes in two kinds:
 
-- **Personal** (the default): `Memory/projects/<project-key>/`, outside the
+- **Personal** (the default): `memory/projects/<project-key>/`, outside the
   repository, as Claude Code keeps auto memory in
   `~/.claude/projects/<project>/memory/`. Agents write memory on their own,
   so it shouldn't land in a repository by default.
@@ -121,7 +143,7 @@ Memory for a project comes in two kinds:
   same layout. A note moves there on purpose once it's worth sharing.
 
 An agent reads personal project memory, then shared project memory, then
-`Memory/shared/` and its own `Memory/<agent>/`.
+`memory/shared/` and its own `memory/<agent>/`.
 
 ## 3. Scopes: managed, user, project, local
 
