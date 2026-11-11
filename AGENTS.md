@@ -85,6 +85,14 @@ a subdirectory named after it, such as `$XDG_CONFIG_HOME/claude/`.
   written from a listing of a real `~/.config/Claude` (the folder isn't
   documented). Its unknown files are left out on purpose, to be reported as
   unclassified.
+- `agents/codex.ncl`: OpenAI's Codex CLI, written from its docs.
+  `CODEX_HOME` moves all of `~/.codex`. What the docs don't name (the
+  SQLite state file) is left out, to be reported as unclassified.
+- `agents/openclaw.ncl`: OpenClaw, written from its docs. Its folder is
+  mostly data, so `OPENCLAW_STATE_DIR` takes it to `$XDG_DATA_HOME/openclaw`
+  and `OPENCLAW_CONFIG_PATH` takes the config file to
+  `$XDG_CONFIG_HOME/openclaw`. Its gateway runs as a service, which the
+  plan's notes cover.
 - `xdg-agents list` and `xdg-agents status` work (`main.go`, with
   `internal/layout`, `internal/xdg` and `internal/status`): `status` reports
   each installed agent's files with their category, target and how to move

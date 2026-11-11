@@ -163,7 +163,7 @@ func TestText(t *testing.T) {
 		"1. move  ~/.claude → ~/.config/claude",
 		"link  ~/.config/claude/cache → ~/.cache/claude/cache",
 		`export CLAUDE_CONFIG_DIR="$HOME/.config/claude"`,
-		"isn't built yet",
+		"`xdg-agents apply` carries out this plan",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)

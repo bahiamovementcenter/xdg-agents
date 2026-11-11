@@ -95,6 +95,9 @@ func agent(a status.Agent) Agent {
 		out.Steps = append(out.Steps, Step{Kind: Move, From: ro.Path, To: ro.Target})
 		out.Env = append(out.Env, Step{Kind: SetEnv, Var: ro.Env, Value: ro.Target})
 		newLoc[ro.Name], moved[ro.Name] = ro.Target, true
+		if ro.Note != "" {
+			note(ro.Path, ro.Note)
+		}
 	}
 
 	// Files the root's variable moves that live outside it (~/.claude.json)
@@ -128,7 +131,7 @@ func agent(a status.Agent) Agent {
 				out.Env = append(out.Env, Step{Kind: SetEnv, Var: it.Via, Value: it.Target})
 			}
 			if it.Setting != "" {
-				note(loc, "can also be moved with the "+it.Setting+" setting, set per project in .claude/settings.local.json (decision 9)")
+				note(loc, "can also be moved with the "+it.Setting+" setting instead (see `xdg-agents status`)")
 			}
 		case status.Stays:
 			note(loc, it.Reason)

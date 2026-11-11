@@ -42,6 +42,10 @@ let Root = {
   category
     | Category
     | doc "Where the root itself goes when its variable is set: everything under it of another category must be symlinked out",
+  note
+    | String
+    | doc "What to know before moving the root, such as a service that doesn't read the shell profile; plan shows it"
+    | optional,
 }
 in
 

@@ -29,8 +29,12 @@ Nothing is changed unless all of these hold. Otherwise it lists every
 problem and stops.
 
 - **The agent isn't running.** It looks for processes named after the
-  layout's id or folder name (`claude-code`, `claude`), including as the
-  script an interpreter runs, such as `node …/claude`.
+  layout's id or folder name (`claude-code`, `claude`, `openclaw`): by
+  process name, by any folder or file name in the program's path, or, when
+  the program is an interpreter (`node`, `bun`, `deno`, `python`), in the
+  script's path, which is where an agent run that way shows up (`node
+  …/lib/openclaw/dist/index.js gateway`). Other arguments don't count, so
+  an editor open on `~/.config/claude/settings.json` isn't the agent.
 - **Every variable in the plan is already set** to its planned value, in
   the shell `apply` runs from.
 - **For every move, in order:** the source exists, the target doesn't, and

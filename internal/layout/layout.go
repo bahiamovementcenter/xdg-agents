@@ -33,6 +33,7 @@ type Root struct {
 	DefaultMacOS string       `json:"default_macos"`
 	Env          string       `json:"env"`
 	Category     xdg.Category `json:"category"`
+	Note         string       `json:"note"`
 }
 
 type Entry struct {

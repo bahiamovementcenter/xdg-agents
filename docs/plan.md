@@ -7,7 +7,7 @@ xdg-agents plan [--json] [AGENT...]
 `plan` turns the `status` report into the exact steps that would put each
 installed agent's files where XDG says they belong. Like `status` it's
 read-only: it changes nothing, and it looks only at names, types and symlink
-targets. `apply` will carry out a plan; it isn't built yet.
+targets. `apply` carries out a plan (`docs/apply.md`).
 
 ## What it plans, in order
 
@@ -23,6 +23,10 @@ targets. `apply` will carry out a plan; it isn't built yet.
    left at its old location inside the root's new place.
 4. **Variables** are listed last, as `export` lines to add wherever the
    agent is started, with paths written using `$HOME`.
+
+A root's `note` in its layout comes with the move as a note: OpenClaw's
+says its gateway service needs the variables too, since a service doesn't
+read the shell profile.
 
 A root whose category is runtime (Claude Code's temp folder) only gets its
 variable: its files are temporary, so nothing is carried over.
