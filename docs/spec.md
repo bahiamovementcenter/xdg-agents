@@ -1,9 +1,7 @@
 # Agent directories: a draft spec
 
-**Status:** draft. Its choices are decisions 32 to 37 in
-`docs/decisions.md`; 32, 33 and 37 are decided. Where this page names an
-open option, it's the recommended one, and it changes if the answer
-differs.
+**Status:** draft. Its choices were settled as decisions 32 to 37 in
+`docs/decisions.md` (2026-11-11), and this page describes the result.
 
 freedesktop.org has no specification for AI agents. This draft adapts its
 two directory specs to them:
