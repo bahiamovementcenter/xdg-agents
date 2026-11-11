@@ -41,6 +41,16 @@ patterns, Fabric	filename:system.md path:fabric/patterns
 prompts, shared (.agents)	path:.agents/prompts extension:md
 commands, shared (.agents)	path:.agents/commands extension:md
 workflows, shared (.agents)	path:.agents/workflows extension:md
+rules, shared (.agents)	path:.agents/rules extension:md
+rules, Claude Code	path:.claude/rules extension:md
+rules, Cursor	path:.cursor/rules extension:mdc
+rules, Cursor (md)	path:.cursor/rules extension:md
+rules, Windsurf	path:.windsurf/rules extension:md
+rules, Cline	path:.clinerules extension:md
+rules, Roo Code	path:.roo/rules extension:md
+rules, Continue	path:.continue/rules extension:md
+rules, Kiro steering	path:.kiro/steering extension:md
+rules, Copilot instructions	filename:.instructions.md path:.github/instructions
 Q
 )
 
