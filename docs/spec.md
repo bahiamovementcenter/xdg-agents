@@ -53,18 +53,18 @@ agent's own files above.
 
 ```sh
 # $XDG_CONFIG_HOME/agent-dirs.dirs
-AGENT_HOME_DIR="$HOME/Projects/Agents"
-AGENT_WORKSPACE_DIR="$HOME/Projects/Agents/Workspace"
-AGENT_MEMORY_DIR="$HOME/Projects/Agents/Memory"
-AGENT_SKILLS_DIR="$HOME/Projects/Agents/Skills"
-AGENT_PROMPTS_DIR="$HOME/Projects/Agents/Prompts"
-AGENT_INBOX_DIR="$HOME/Projects/Agents/Inbox"
-AGENT_OUTPUTS_DIR="$HOME/Projects/Agents/Outputs"
+AGENT_HOME_DIR="$HOME/Agents"
+AGENT_WORKSPACE_DIR="$HOME/Agents/Workspace"
+AGENT_MEMORY_DIR="$HOME/Agents/Memory"
+AGENT_SKILLS_DIR="$HOME/Agents/Skills"
+AGENT_PROMPTS_DIR="$HOME/Agents/Prompts"
+AGENT_INBOX_DIR="$HOME/Agents/Inbox"
+AGENT_OUTPUTS_DIR="$HOME/Agents/Outputs"
 ```
 
 | Variable | Holds | Like (xdg-user-dirs) |
 | :-- | :-- | :-- |
-| `AGENT_HOME_DIR` | The agent-homeDir; the others default under it. Under `XDG_PROJECTS_DIR`, or `~/Agents` when there's none (decision 32) | `$HOME` |
+| `AGENT_HOME_DIR` | The agent-homeDir, visible like `~/Documents`; the others default under it (decision 32) | `$HOME` |
 | `AGENT_WORKSPACE_DIR` | Scratch space for work that isn't in any project | `XDG_DESKTOP_DIR` |
 | `AGENT_MEMORY_DIR` | Memory a person can read and edit, laid out as in [Memory](#memory) (decision 33) | `XDG_DOCUMENTS_DIR` |
 | `AGENT_SKILLS_DIR` | Skills a person writes or installs, shared by every agent (decision 34) | none |
