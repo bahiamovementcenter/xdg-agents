@@ -16,17 +16,16 @@ Facts still to find out (not decisions) are in `docs/follow-ups.md`.
 
 | # | Question | Options |
 | :-- | :-- | :-- |
-| 32 | Where is the agent-homeDir (`AGENT_HOME_DIR`)? Several agents (Amp, Cline, Codex, Cursor, Gemini CLI) already read skills from a hidden `~/.agents/skills`, but nobody owns that convention, and xdg-user-dirs folders are visible. | **A** visible `~/Agents`, like `~/Documents` (recommended: it's content a person opens) · **B** hidden `~/.agents`, matching what agents already read · **C** `$XDG_DATA_HOME/agents` |
-| 33 | Is `AGENT_MEMORY_DIR` shared by every agent, or split per agent? | **A** a subfolder per agent (`Memory/claude/`), any agent may read the others (recommended: memory formats differ between agents) · **B** one shared folder |
-| 34 | Are skills content (`AGENT_SKILLS_DIR`) or configuration (`$XDG_CONFIG_HOME/agents/skills`)? | **A** content: a person writes and installs them, and they're shared (recommended) · **B** configuration |
-| 35 | Adopt the four scopes and their precedence (local, project, user, managed), with only configuration allowed inside a project? | **A** yes, as in the spec (recommended) · **B** change it (say how) |
-| 36 | Configuration shared by every agent (a global `AGENTS.md`): in `$XDG_CONFIG_HOME/agents/`, beside each agent's own folder (decision 28 stays)? | **A** yes (recommended) · **B** only in each agent's own folder |
-| 37 | Projects: rely on `XDG_PROJECTS_DIR` from xdg-user-dirs, or add an `AGENT_PROJECTS_DIR` of our own? | **A** `XDG_PROJECTS_DIR`, falling back to the folder an agent is started in (recommended) · **B** our own variable |
+| 32 | Where is the agent-homeDir (`AGENT_HOME_DIR`), the folder that holds the shared Workspace, Memory, Skills, Prompts, Inbox and Outputs folders? Several agents (Amp, Cline, Codex, Cursor, Gemini CLI) already read skills from a hidden `~/.agents/skills`, but nobody owns that convention. | **A** visible `~/Agents`, like `~/Documents` · **B** hidden `~/.agents`, matching what agents already read · **C** `$XDG_CONFIG_HOME/agents` (hidden, and mixes content with settings) · **D** `$XDG_PROJECTS_DIR/Agents` (`~/Projects/Agents`), which falls back to `~/Agents` when there's no Projects folder (recommended: no new top-level folder, and it follows decision 37) |
+| 33 | How is `AGENT_MEMORY_DIR` laid out? | **A** a folder per agent (`Memory/<agent>/<name>.md`) plus `Memory/common/`, where each agent keeps one file every agent reads (`memory.<agent>.md`); a project can have the same layout in `<project>/.agents/memory/` (recommended, from the owner's suggestion) · **B** a folder per agent only · **C** one shared folder |
+| 34 | Skills are folders with a `SKILL.md` that teach an agent a task ("how we release", "our SQL style"). Are they treated like documents a person writes and shares between agents (visible, in `AGENT_SKILLS_DIR`), or like settings (hidden, in `$XDG_CONFIG_HOME/agents/skills`, backed up with dotfiles)? | **A** like documents, in `AGENT_SKILLS_DIR` (recommended) · **B** like settings |
+| 35 | Adopt the four scopes and their precedence (local, project, user, managed)? And what may live inside a project? | **A** the four scopes; a project may hold configuration and shared content (instructions, settings, skills, prompts, memory), but never state, cache, logs or credentials, which go in the user's directories keyed by project (recommended: decision 33A puts memory in projects) · **B** the four scopes, configuration only in a project · **C** change the scopes (say how) |
+| 36 | A global `AGENTS.md` and other configuration every agent should read, in `$XDG_CONFIG_HOME/agents/`? Today each agent reads only its own (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`), so `plan` would link each of those to the shared file. Each agent keeps its own folder for the rest (decision 28). | **A** yes (recommended: write instructions once for every agent) · **B** no, only each agent's own files |
 
 ## Decided
 
-Numbers 1 to 27 were answered "all recommended" on 2026-11-07, and 28 to 31
-on 2026-11-08. Where a decision changed the design, it's recorded in the
+Numbers 1 to 27 were answered "all recommended" on 2026-11-07, 28 to 31
+on 2026-11-08, and 37 on 2026-11-11. Where a decision changed the design, it's recorded in the
 place it names: ADR-0001 to ADR-0004, `docs/status.md`, `docs/apply.md`.
 
 
@@ -90,3 +89,9 @@ place it names: ADR-0001 to ADR-0004, `docs/status.md`, `docs/apply.md`.
 | 29 | Should `apply` require the plan's variables to be set *before* it moves anything? Otherwise an agent started in between finds its folder gone and starts afresh (a new, empty `~/.claude`). | **A** yes: refuse until they're set, as built · **B** no: move first, and tell the user to set them | **A** (2026-11-08) |
 | 30 | How should `apply` handle a running agent? | **A** refuse until it's quit, found by process name, as built · **B** warn and continue | **A** (2026-11-08) |
 | 31 | Where do the variables get set? | **A** the user adds the printed `export` lines; apply never edits shell profiles, as built · **B** apply writes an environment file (such as `~/.config/environment.d/60-xdg-agents.conf`) and records it in the journal for undo · **C** both: write the file, and print the lines for shells that don't read it | **A** (2026-11-08) |
+
+### The agent directories spec (see `docs/spec.md`)
+
+| # | Question | Options | Answer |
+| :-- | :-- | :-- | :-- |
+| 37 | Projects: rely on `XDG_PROJECTS_DIR` from xdg-user-dirs, or add an `AGENT_PROJECTS_DIR` of our own? | **A** `XDG_PROJECTS_DIR`, falling back to the folder an agent is started in (recommended) · **B** our own variable | **A** (2026-11-11) |
