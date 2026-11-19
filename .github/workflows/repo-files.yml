@@ -1,0 +1,21 @@
+name: repo-files
+
+on: [push, pull_request]
+
+jobs:
+  repo-files:
+    runs-on: ubuntu-latest
+    env:
+      REQUIRE_LICENSE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require LICENSE, README and CODEOWNERS
+        run: |
+          shopt -s nullglob nocaseglob
+          fail=0
+          missing() { echo "::error::missing $1"; fail=1; }
+          lic=(LICEN[CS]E* COPYING*); readme=(README*)
+          if [ "$REQUIRE_LICENSE" = true ] && [ ${#lic[@]} -eq 0 ]; then missing LICENSE; fi
+          [ ${#readme[@]} -gt 0 ] || missing README
+          [ -f CODEOWNERS ] || [ -f .github/CODEOWNERS ] || [ -f docs/CODEOWNERS ] || missing CODEOWNERS
+          exit $fail
